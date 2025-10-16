@@ -2,7 +2,7 @@
 
 > **Disclaimer**: Bear in mind this is still a project in early development. It still needs further testing and polishing. Feedback and contributions are welcome!
 
-A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. This is a 100% local safe wallet with multisig support, import/export, and transaction workflows.
+A 100% local web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. No worrying about the SafeAPI being compromised... Run an instance yourself!
 
 - [MSIG UI](#msig-ui)
   - [Features](#features)
