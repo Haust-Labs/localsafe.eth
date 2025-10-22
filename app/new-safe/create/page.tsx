@@ -1,13 +1,13 @@
 import CreateSafeClient from "./CreateSafeClient";
 
 /**
- * Create Safe Page Component
+ * Deploy New Safe Page Component
  *
- * This component serves as the main entry point for the Create Safe page.
+ * This component serves as the main entry point for the Deploy New Safe page.
  * It imports and renders the CreateSafeClient component, which contains
  * the client-side logic and UI for creating a new safe.
  *
- * @returns The Create Safe page component.
+ * @returns The Deploy New Safe page component.
  */
 export default function CreateSafePage() {
   return <CreateSafeClient />;

@@ -111,7 +111,7 @@ export default function ConnectSafeClient() {
         <div className="text-base-content text-sm">
           You can only add Safe accounts that are already deployed on the
           selected network. If your Safe is not yet deployed, please use the
-          Create Safe flow.
+          Deploy New Safe flow.
         </div>
 
         {/* Form Safe Name, Address, Network Select, Error, Add Button */}

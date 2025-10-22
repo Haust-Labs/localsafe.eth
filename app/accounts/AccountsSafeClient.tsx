@@ -122,14 +122,14 @@ export default function AccountsPage() {
               className="btn btn-primary btn-sm"
               data-testid="create-safe-nav-btn"
             >
-              Create Safe
+              Deploy New Safe
             </Link>
             <Link
               href="/new-safe/connect"
               className="btn btn-secondary btn-sm"
               data-testid="add-safe-nav-btn"
             >
-              Add Safe
+              Add Existing Safe
             </Link>
           </div>
         </div>

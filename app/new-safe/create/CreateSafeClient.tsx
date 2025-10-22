@@ -29,7 +29,7 @@ import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import { getRandomSafeName } from "@/app/utils/helpers";
 
 /**
- * Create Safe Client Component
+ * Deploy New Safe Client Component
  *
  * This component handles the client-side logic and UI for creating a new safe.
  * It manages the multi-step process of selecting networks, adding owners,
@@ -37,7 +37,7 @@ import { getRandomSafeName } from "@/app/utils/helpers";
  *
  * It also store undeployed safes in local storage for later execution.
  *
- * @returns Create Safe Client Component
+ * @returns Deploy New Safe Client Component
  */
 export default function CreateSafeClient() {
   // Hooks
@@ -506,7 +506,7 @@ export default function CreateSafeClient() {
                       onClick={handleDeploySafe}
                       data-testid="create-safe-btn"
                     >
-                      {isDeploying ? "Deploying..." : "Create Safe"}
+                      {isDeploying ? "Deploying..." : "Deploy New Safe"}
                     </button>
                   ) : (
                     <button

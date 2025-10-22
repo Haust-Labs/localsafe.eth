@@ -8,49 +8,13 @@ import NetworkForm from "./NetworkForm";
 import { NetworkFormState } from "../utils/types";
 import XSymbolSvg from "../assets/svg/XSymbolSvg";
 import PenEditSvg from "../assets/svg/PenEditSvg";
-import polygonZkEvmIcon from "../assets/chainlogos/polygon-zkevm.webp";
-import zkSyncIcon from "../assets/chainlogos/zksync-era.webp";
-import zoraIcon from "../assets/chainlogos/zora.webp";
-import scrollIcon from "../assets/chainlogos/scroll.webp";
-import lineaIcon from "../assets/chainlogos/linea.webp";
-import gnosisIcon from "../assets/chainlogos/gnosis.webp";
-import binanceIcon from "../assets/chainlogos/binance.webp";
-import avaxIcon from "../assets/chainlogos/avax.webp";
-import celoIcon from "../assets/chainlogos/celo.webp";
-import mantleIcon from "../assets/chainlogos/mantle.webp";
-import auroraIcon from "../assets/chainlogos/aurora.webp";
-
-// Helper function to get chain icon URL from popular chains (using local assets)
-const getChainIconUrl = (chainId: number): string | null => {
-  const chainIconMap: Record<number, string> = {
-    // Note: Ethereum, Arbitrum, Optimism, Base, Polygon already have icons from RainbowKit
-    56: binanceIcon.src,
-    100: gnosisIcon.src,
-    324: zkSyncIcon.src,
-    1101: polygonZkEvmIcon.src,
-    43114: avaxIcon.src,
-    42220: celoIcon.src,
-    59144: lineaIcon.src,
-    534352: scrollIcon.src,
-    5000: mantleIcon.src,
-    1313161554: auroraIcon.src,
-    7777777: zoraIcon.src,
-  };
-
-  return chainIconMap[chainId] || null;
-};
 
 // Component to render chain icon with fallback
 const ChainIcon = ({ chain }: { chain: any }) => {
   const [imageError, setImageError] = useState(false);
 
-  // First check if the chain already has an iconUrl (from RainbowKit or our config)
-  let iconUrl = chain.iconUrl;
-
-  // If not, check our local mappings
-  if (!iconUrl) {
-    iconUrl = getChainIconUrl(chain.id);
-  }
+  // Use iconUrl if available (from RainbowKit or user-provided)
+  const iconUrl = chain.iconUrl;
 
   if (!iconUrl || imageError) {
     return (

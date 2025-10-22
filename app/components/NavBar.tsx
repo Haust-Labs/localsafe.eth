@@ -95,9 +95,7 @@ export default function NavBar() {
       <div className="flex items-center">
         <label className="swap swap-rotate">
           <input type="checkbox" className="theme-controller" value="light" />
-          {/* Sun */}
           <SunSvg />
-          {/* Moon */}
           <MoonSvg />
         </label>
         <div className="divider divider-horizontal mx-1"></div>

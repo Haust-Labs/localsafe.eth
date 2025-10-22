@@ -33,60 +33,53 @@ import {
   celo,
   avalanche,
   mantle,
-  aurora,
   arbitrum,
   baseSepolia,
   zkSync,
   zora,
 } from "wagmi/chains";
-import polygonZkEvmIcon from "../assets/chainlogos/polygon-zkevm.webp";
-import zkSyncIcon from "../assets/chainlogos/zksync-era.webp";
-import zoraIcon from "../assets/chainlogos/zora.webp";
-import scrollIcon from "../assets/chainlogos/scroll.webp";
-import lineaIcon from "../assets/chainlogos/linea.webp";
-import gnosisIcon from "../assets/chainlogos/gnosis.webp";
-import binanceIcon from "../assets/chainlogos/binance.webp";
-import avaxIcon from "../assets/chainlogos/avax.webp";
-import celoIcon from "../assets/chainlogos/celo.webp";
-import mantleIcon from "../assets/chainlogos/mantle.webp";
-import auroraIcon from "../assets/chainlogos/aurora.webp";
+import ethereumIcon from "../assets/chainIcons/ethereum.svg";
+import arbitrumIcon from "../assets/chainIcons/arbitrum.svg";
+import optimismIcon from "../assets/chainIcons/optimism.svg";
+import baseIcon from "../assets/chainIcons/base.svg";
+import polygonIcon from "../assets/chainIcons/polygon.svg";
+import zkSyncIcon from "../assets/chainIcons/zksync.svg";
+import zoraIcon from "../assets/chainIcons/zora.svg";
+import scrollIcon from "../assets/chainIcons/scroll.svg";
+import lineaIcon from "../assets/chainIcons/linea.svg";
+import gnosisIcon from "../assets/chainIcons/gnosis.svg";
+import bscIcon from "../assets/chainIcons/bsc.svg";
+import avalancheIcon from "../assets/chainIcons/avalanche.svg";
+import celoIcon from "../assets/chainIcons/celo.svg";
+import mantleIcon from "../assets/chainIcons/mantle.svg";
+import hardhatIcon from "../assets/chainIcons/hardhat.svg";
 
-// Helper to add icon URLs to chains (only for chains that don't already have icons)
-const addChainIcon = (chain: Chain, iconUrl: string, iconBackground?: string): Chain => ({
+// Helper to add icon URLs to chains
+const addChainIcon = (chain: Chain, iconUrl: string): Chain => ({
   ...chain,
   iconUrl,
-  iconBackground: iconBackground || "transparent",
 } as Chain);
 
-// Default icon URL for chains without logos (embedded SVG)
-const DEFAULT_CHAIN_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10' fill='%239CA3AF'/%3E%3Ccircle cx='5' cy='12' r='2' fill='white'/%3E%3Ccircle cx='19' cy='12' r='2' fill='white'/%3E%3Ccircle cx='12' cy='5' r='2' fill='white'/%3E%3Ccircle cx='12' cy='19' r='2' fill='white'/%3E%3Cline x1='12' y1='7' x2='12' y2='17' stroke='white' stroke-width='1.5'/%3E%3Cline x1='7' y1='12' x2='17' y2='12' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E";
-
-// Default chains that should always be available
-// Note: mainnet, arbitrum, optimism, base, polygon, sepolia, baseSepolia already have RainbowKit icons
+// Default chains that should always be available with local SVG icons
 const DEFAULT_CHAINS: Chain[] = [
-  mainnet,
-  // L2s and scaling solutions
-  arbitrum,
-  optimism,
-  base,
-  polygon,
-  addChainIcon(polygonZkEvm, polygonZkEvmIcon.src, "#8247e5"),
+  addChainIcon(mainnet, ethereumIcon.src),
+  addChainIcon(arbitrum, arbitrumIcon.src),
+  addChainIcon(optimism, optimismIcon.src),
+  addChainIcon(base, baseIcon.src),
+  addChainIcon(polygon, polygonIcon.src),
+  addChainIcon(polygonZkEvm, polygonIcon.src), // Uses same polygon icon
   addChainIcon(zkSync, zkSyncIcon.src),
   addChainIcon(zora, zoraIcon.src),
-  addChainIcon(scroll, scrollIcon.src, "#ffeeda"),
+  addChainIcon(scroll, scrollIcon.src),
   addChainIcon(linea, lineaIcon.src),
-  // Other mainnets
-  addChainIcon(gnosis, gnosisIcon.src, "#04795b"),
-  addChainIcon(bsc, binanceIcon.src, "#f3ba2f"),
-  addChainIcon(avalanche, avaxIcon.src, "#e84142"),
-  addChainIcon(celo, celoIcon.src, "#fcff52"),
+  addChainIcon(gnosis, gnosisIcon.src),
+  addChainIcon(bsc, bscIcon.src),
+  addChainIcon(avalanche, avalancheIcon.src),
+  addChainIcon(celo, celoIcon.src),
   addChainIcon(mantle, mantleIcon.src),
-  addChainIcon(aurora, auroraIcon.src, "#70d44b"),
-  // Testnets
-  sepolia,
-  baseSepolia,
-  // Local dev
-  addChainIcon(anvil, DEFAULT_CHAIN_ICON, "#1e1e1e"),
+  addChainIcon(sepolia, ethereumIcon.src), // Uses ethereum icon
+  addChainIcon(baseSepolia, baseIcon.src), // Uses base icon
+  addChainIcon(anvil, hardhatIcon.src), // Uses hardhat icon for local dev
 ];
 
 export interface WagmiConfigContextType {
@@ -116,15 +109,17 @@ export const WagmiConfigProvider: React.FC<{
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
-      if (stored) {
-        try {
-          setConfigChains(JSON.parse(stored));
-        } catch {
-          setConfigChains(DEFAULT_CHAINS);
-        }
-      } else {
-        setConfigChains(DEFAULT_CHAINS);
-      }
+      setConfigChains(DEFAULT_CHAINS);
+      console.log(DEFAULT_CHAINS[5].iconUrl);
+      // if (stored) {
+      //   try {
+      //     setConfigChains(JSON.parse(stored));
+      //   } catch {
+      //     setConfigChains(DEFAULT_CHAINS);
+      //   }
+      // } else {
+      //   setConfigChains(DEFAULT_CHAINS);
+      // }
       setChainsLoaded(true);
     }
   }, []);

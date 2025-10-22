@@ -9,19 +9,21 @@ import poweredByCyfrinBright from "../assets/svg/powered-by-cyfrin-bright.png";
 import packageJson from "../../package.json";
 
 export default function Footer() {
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [theme, setTheme] = useState<string>("light");
   const version =
     process.env.NEXT_PUBLIC_APP_VERSION || packageJson.version || "0.0.0";
 
   useEffect(() => {
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      setIsDarkTheme(theme === "dark");
-    };
+    // Check initial theme
+    const initialTheme = document.documentElement.getAttribute("data-theme") || "light";
+    setTheme(initialTheme);
 
-    checkTheme();
+    // Watch for theme changes
+    const observer = new MutationObserver(() => {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+      setTheme(currentTheme);
+    });
 
-    const observer = new MutationObserver(checkTheme);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme"],
@@ -45,7 +47,7 @@ export default function Footer() {
             className="transition-opacity hover:opacity-80"
           >
             <Image
-              src={isDarkTheme ? poweredByCyfrinDark : poweredByCyfrinBright}
+              src={theme === "dark" ? poweredByCyfrinBright : poweredByCyfrinDark}
               alt="Powered by Cyfrin"
               height={32}
             />
