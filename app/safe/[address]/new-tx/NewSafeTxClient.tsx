@@ -426,6 +426,27 @@ export default function NewSafeTxClient() {
                   {error}
                 </div>
               )}
+              {/* Nonce Input */}
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-nonce-fieldset"
+              >
+                <legend className="fieldset-legend">Custom Nonce (optional)</legend>
+                <input
+                  type="number"
+                  className="input input-bordered w-full"
+                  placeholder={`Leave empty for current nonce (${safeInfo?.nonce ?? ""})`}
+                  value={customNonce}
+                  onChange={(e) => setCustomNonce(e.target.value)}
+                  min="0"
+                  data-testid="new-safe-tx-nonce-input"
+                />
+                <label className="label">
+                  <span className="label-text-alt">
+                    Current Safe nonce: {safeInfo?.nonce ?? "-"}
+                  </span>
+                </label>
+              </fieldset>
               {/* Submit Button */}
               <button
                 type="submit"
@@ -498,25 +519,6 @@ export default function NewSafeTxClient() {
                 </tbody>
               </table>
             </div>
-            {/* Nonce Input */}
-            {transactions.length > 0 && (
-              <div className="mt-4">
-                <label className="label">
-                  <span className="label-text text-sm">
-                    Custom Nonce (optional, current: {safeInfo?.nonce ?? "-"})
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  className="input input-bordered input-sm w-full"
-                  placeholder={`Leave empty for current nonce (${safeInfo?.nonce ?? ""})`}
-                  value={customNonce}
-                  onChange={(e) => setCustomNonce(e.target.value)}
-                  min="0"
-                  data-testid="new-safe-tx-nonce-input"
-                />
-              </div>
-            )}
             {/* Build Safe Transaction Button */}
             <button
               className="btn btn-primary mt-4"
