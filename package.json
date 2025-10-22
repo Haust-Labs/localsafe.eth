@@ -1,8 +1,8 @@
 {
   "bin": {
-    "msig": "./cli.js"
+    "localsafe": "./cli.js"
   },
-  "name": "msig-ui",
+  "name": "localsafe.eth",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "msig": "next build --turbopack && next start",
+    "localsafe": "next build --turbopack && next start",
     "anvil": "anvil --load-state ./anvil-safe-state.json --block-time 1",
     "test:e2e": "bash tests/scripts/start-anvil-and-test.sh",
     "test:clean": "pkill -9 ^next-server || true; pkill -9 ^anvil",

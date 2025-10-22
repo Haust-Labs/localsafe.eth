@@ -1,17 +1,17 @@
-# MSIG UI
+# localsafe.eth
 
 > **Disclaimer**: Bear in mind this is still a project in early development. It still needs further testing and polishing. Feedback and contributions are welcome!
 
 A 100% local web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. No worrying about the SafeAPI being compromised... Run an instance yourself!
 
-- [MSIG UI](#msig-ui)
+- [localsafe.eth](#localsafeeth)
   - [Features](#features)
   - [Tech Stack:](#tech-stack)
   - [Quickstart](#quickstart)
     - [Requirements](#requirements)
     - [Running the dev server](#running-the-dev-server)
     - [Running E2E Tests](#running-e2e-tests)
-    - [Run MSIG UI with Production Build](#run-msig-ui-with-production-build)
+    - [Run localsafe.eth with Production Build](#run-localsafeeth-with-production-build)
     - [Anvil State Management: --dump-state \& --load-state](#anvil-state-management---dump-state----load-state)
     - [Example: Test Runner Script](#example-test-runner-script)
     - [Example: Playwright Test (export)](#example-playwright-test-export)
@@ -19,6 +19,7 @@ A 100% local web interface for managing multisignature wallets inspired by SafeW
   - [Deploying Safe Contracts Locally with `safe-smart-account`](#deploying-safe-contracts-locally-with-safe-smart-account)
   - [TODO](#todo)
   - [References](#references)
+  - [Contributors](#contributors)
 
 ## Features
 
@@ -54,8 +55,8 @@ A 100% local web interface for managing multisignature wallets inspired by SafeW
 2. Clone the repository and install dependencies:
 
 ```bash
-  git clone https://github.com/s3bc40/msig-ui
-  cd msig-ui
+  git clone https://github.com/cyfrin/localsafe.eth
+  cd localsafe.eth
   pnpm install
 ```
 
@@ -107,12 +108,12 @@ _Note: there is a utility command `pnpm run test:clean` to clean up any wild pro
 - The test runner script (`tests/scripts/start-anvil-and-test.sh`) starts Anvil, runs Synpress, and then Playwright tests.
 - UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.But headless tests should work fine.
 
-### Run MSIG UI with Production Build
+### Run localsafe.eth with Production Build
 
 To run the app with a production build locally and run the optimized version:
 
 ```bash
-  pnpm run msig
+  pnpm run localsafe
 ```
 
 ### Anvil State Management: --dump-state & --load-state
@@ -267,6 +268,6 @@ To run your own local Safe contracts for development, follow these steps:
 
 Special thanks to all contributors!
 
-<a href="https://github.com/s3bc40/msig-ui/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=s3bc40/msig-ui" />
+<a href="https://github.com/cyfrin/localsafe/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=cyfrin/localsafe" />
 </a>

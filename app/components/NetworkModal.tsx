@@ -3,11 +3,72 @@
 import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import { useChainManager } from "../hooks/useChainManager";
-import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
+import DefaultNetworkSvg from "../assets/svg/DefaultNetworkSvg";
 import NetworkForm from "./NetworkForm";
 import { NetworkFormState } from "../utils/types";
 import XSymbolSvg from "../assets/svg/XSymbolSvg";
 import PenEditSvg from "../assets/svg/PenEditSvg";
+import polygonZkEvmIcon from "../assets/chainlogos/polygon-zkevm.webp";
+import zkSyncIcon from "../assets/chainlogos/zksync-era.webp";
+import zoraIcon from "../assets/chainlogos/zora.webp";
+import scrollIcon from "../assets/chainlogos/scroll.webp";
+import lineaIcon from "../assets/chainlogos/linea.webp";
+import gnosisIcon from "../assets/chainlogos/gnosis.webp";
+import binanceIcon from "../assets/chainlogos/binance.webp";
+import avaxIcon from "../assets/chainlogos/avax.webp";
+import celoIcon from "../assets/chainlogos/celo.webp";
+import mantleIcon from "../assets/chainlogos/mantle.webp";
+import auroraIcon from "../assets/chainlogos/aurora.webp";
+
+// Helper function to get chain icon URL from popular chains (using local assets)
+const getChainIconUrl = (chainId: number): string | null => {
+  const chainIconMap: Record<number, string> = {
+    // Note: Ethereum, Arbitrum, Optimism, Base, Polygon already have icons from RainbowKit
+    56: binanceIcon.src,
+    100: gnosisIcon.src,
+    324: zkSyncIcon.src,
+    1101: polygonZkEvmIcon.src,
+    43114: avaxIcon.src,
+    42220: celoIcon.src,
+    59144: lineaIcon.src,
+    534352: scrollIcon.src,
+    5000: mantleIcon.src,
+    1313161554: auroraIcon.src,
+    7777777: zoraIcon.src,
+  };
+
+  return chainIconMap[chainId] || null;
+};
+
+// Component to render chain icon with fallback
+const ChainIcon = ({ chain }: { chain: any }) => {
+  const [imageError, setImageError] = useState(false);
+
+  // First check if the chain already has an iconUrl (from RainbowKit or our config)
+  let iconUrl = chain.iconUrl;
+
+  // If not, check our local mappings
+  if (!iconUrl) {
+    iconUrl = getChainIconUrl(chain.id);
+  }
+
+  if (!iconUrl || imageError) {
+    return (
+      <div className="h-6 w-6">
+        <DefaultNetworkSvg />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={iconUrl}
+      alt={`${chain.name} logo`}
+      className="h-6 w-6 rounded-full"
+      onError={() => setImageError(true)}
+    />
+  );
+};
 
 /**
  * A modal component to manage user config networks.
@@ -51,11 +112,11 @@ export default function NetworkModal({
       rpcUrls: { default: { http: [state.rpcUrl] } },
       blockExplorers: state.blockExplorerUrl
         ? {
-            default: {
-              name: state.blockExplorerName || "Explorer",
-              url: state.blockExplorerUrl,
-            },
-          }
+          default: {
+            name: state.blockExplorerName || "Explorer",
+            url: state.blockExplorerUrl,
+          },
+        }
         : undefined,
       nativeCurrency: state.nativeCurrency,
     });
@@ -98,8 +159,8 @@ export default function NetworkModal({
                 return (
                   <li className="list-row" key={chain.id}>
                     <div>
-                      <div className="rounded-box bg-base-200 flex size-10 items-center justify-center">
-                        <NetworkChainSvg />
+                      <div className="rounded-box bg-base-200 flex size-10 items-center justify-center overflow-hidden">
+                        <ChainIcon chain={chain} />
                       </div>
                     </div>
                     <div>

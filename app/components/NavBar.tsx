@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import NetworkModal from "./NetworkModal";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import CustomConnectButton from "./CustomConnectButton";
 import { useAccount } from "wagmi";
-import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
 import { useChainManager } from "../hooks/useChainManager";
 import { NetworkFormState } from "../utils/types";
 import SunSvg from "../assets/svg/SunSvg";
@@ -90,7 +89,7 @@ export default function NavBar() {
           className="mx-2 px-2 text-sm font-bold sm:text-xl"
           href="/accounts"
         >
-          MSIG UI
+          localsafe.eth
         </Link>
       </div>
       <div className="flex items-center">
@@ -102,38 +101,14 @@ export default function NavBar() {
           <MoonSvg />
         </label>
         <div className="divider divider-horizontal mx-1"></div>
-        {isConnected && (
-          <>
-            {/* Manage Network button with indicator if needed */}
-            <div className="indicator">
-              {showNetworkFormIndicator && (
-                <span className="indicator-item badge badge-xs badge-warning">
-                  New
-                </span>
-              )}
-              <button
-                className="btn btn-primary sm:btn-sm btn-xs rounded"
-                onClick={handleOpenNetworkModal}
-                title="Manage Networks"
-              >
-                Add Network
-              </button>
-            </div>
-            {!showNetworkFormIndicator && (
-            <div className="divider divider-horizontal mx-1"></div>
-            )}
-          </>
-        )}
-        <ConnectButton
-        chainStatus={showNetworkFormIndicator ? "none" : 	{ smallScreen: "icon", largeScreen: "full" }}
-          accountStatus={{
-            smallScreen: "avatar",
-            largeScreen: "full",
-          }}
-          showBalance={{
-            smallScreen: false,
-            largeScreen: true,
-          }}
+        <CustomConnectButton
+          onOpenNetworkModal={handleOpenNetworkModal}
+          showNetworkFormIndicator={showNetworkFormIndicator}
+          chainStatusDisplay={
+            showNetworkFormIndicator
+              ? "none"
+              : { smallScreen: "icon", largeScreen: "full" }
+          }
         />
         <NetworkModal
           open={networkModalOpen}
