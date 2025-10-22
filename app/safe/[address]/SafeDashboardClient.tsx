@@ -18,6 +18,7 @@ import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
+import TokenBalancesSection from "@/app/components/TokenBalancesSection";
 
 /**
  * SafeDashboardClient component that displays the dashboard for a specific safe, including its details and actions.
@@ -45,7 +46,7 @@ export default function SafeDashboardClient({
     getSafeTransactionCurrent,
   } = useSafe(safeAddress);
   // Hooks
-  const { exportTx, importTx } = useSafeTxContext();
+  const { exportTx, importTx, getAllTransactions } = useSafeTxContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,6 +56,7 @@ export default function SafeDashboardClient({
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
   const [currentTx, setCurrentTx] = useState<EthSafeTransaction | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<string | null>(null);
+  const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importPreview, setImportPreview] = useState<
@@ -62,30 +64,49 @@ export default function SafeDashboardClient({
   >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch current transaction if any
+  // Fetch all transactions if any
   useEffect(() => {
     if (!kit || isLoading) return; // Wait for kit to be ready
     let cancelled = false;
-    async function fetchTx() {
+    async function fetchTxs() {
       try {
-        const tx = await getSafeTransactionCurrent();
-        const txHash = await kit?.getTransactionHash(tx as EthSafeTransaction);
-        if (!cancelled) {
-          setCurrentTx(tx);
-          setCurrentTxHash(txHash || null);
+        const transactions = getAllTransactions(safeAddress);
+
+        if (transactions.length > 0) {
+          // Get hashes for all transactions
+          const txsWithHashes = await Promise.all(
+            transactions.map(async (tx) => ({
+              tx,
+              hash: await kit.getTransactionHash(tx),
+            }))
+          );
+
+          if (!cancelled) {
+            setAllTxs(txsWithHashes);
+            // Set first (lowest nonce) as current
+            setCurrentTx(txsWithHashes[0].tx);
+            setCurrentTxHash(txsWithHashes[0].hash);
+          }
+        } else {
+          if (!cancelled) {
+            setAllTxs([]);
+            setCurrentTx(null);
+            setCurrentTxHash(null);
+          }
         }
       } catch {
         if (!cancelled) {
+          setAllTxs([]);
           setCurrentTx(null);
           setCurrentTxHash(null);
         }
       }
     }
-    fetchTx();
+    fetchTxs();
     return () => {
       cancelled = true;
     };
-  }, [getSafeTransactionCurrent, kit, isLoading]);
+  }, [getAllTransactions, kit, isLoading, safeAddress]);
 
   // Handler for deploying undeployed Safe
   async function handleDeployUndeployedSafe() {
@@ -186,7 +207,7 @@ export default function SafeDashboardClient({
           <div className="stat-title">Balance</div>
           <div className="stat-value text-primary flex gap-1">
             <p>
-              {safeInfo?.balance ? formatEther(safeInfo.balance) : "-"}{" "}
+              {safeInfo?.balance !== undefined ? formatEther(safeInfo.balance) : "-"}{" "}
               {chain?.nativeCurrency.symbol ?? ""}
             </p>
           </div>
@@ -227,43 +248,13 @@ export default function SafeDashboardClient({
         {/* Actions in top right cell */}
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
-            {/* Transaction import/export buttons */}
+            {/* Transaction import button */}
             <div
               className="mb-2 flex gap-2"
               data-testid="safe-dashboard-actions-row"
             >
               <button
-                className="btn btn-primary btn-outline btn-sm"
-                data-testid="safe-dashboard-export-tx-btn"
-                onClick={() => {
-                  if (!currentTx) return;
-                  try {
-                    const json = exportTx(safeAddress);
-                    const blob = new Blob([json], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `safe-tx.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } catch (e: unknown) {
-                    console.error("Export error:", e);
-                  }
-                }}
-                title="Export transaction JSON to file"
-                disabled={
-                  !currentTx ||
-                  unavailable ||
-                  !isOwner ||
-                  !safeInfo?.deployed ||
-                  !!error ||
-                  isLoading
-                }
-              >
-                Export Tx
-              </button>
-              <button
-                className="btn btn-secondary btn-outline btn-sm"
+                className="btn btn-secondary btn-outline btn-sm w-full"
                 data-testid="safe-dashboard-import-tx-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import transaction JSON from file"
@@ -275,7 +266,7 @@ export default function SafeDashboardClient({
                   isLoading
                 }
               >
-                Import Tx
+                Import Transaction
               </button>
               <input
                 type="file"
@@ -351,7 +342,7 @@ export default function SafeDashboardClient({
                     onClick={handleGoToBuilder}
                     data-testid="safe-dashboard-go-to-builder-btn"
                   >
-                    Go to Builder
+                    Build New Transaction
                   </button>
                 </>
               )}
@@ -373,44 +364,71 @@ export default function SafeDashboardClient({
             )}
           </div>
         </AppCard>
-        {/* Current Transaction in bottom right cell */}
-        {currentTx && currentTxHash && (
+        {/* Current Transactions Queue in bottom right cell */}
+        {allTxs.length > 0 && (
           <AppCard
-            title="Current Transaction"
+            title="Current Transactions"
             testid="safe-dashboard-current-tx-card"
           >
-            <Link
-              className="btn btn-accent btn-outline flex w-full items-center gap-4 rounded"
-              data-testid="safe-dashboard-current-tx-link"
-              href={`/safe/${safeAddress}/tx/${currentTxHash}`}
-              title="View transaction details"
+            <div className="flex flex-col gap-2">
+              {allTxs.map(({ tx, hash }) => (
+                <Link
+                  key={hash}
+                  className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
+                  data-testid={`safe-dashboard-current-tx-link-${hash}`}
+                  href={`/safe/${safeAddress}/tx/${hash}`}
+                  title="View transaction details"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Nonce:</span>
+                    <span className="font-mono">{tx.data.nonce}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Hash:</span>
+                    <span className="max-w-[120px] truncate font-mono text-xs" title={hash}>
+                      {hash}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Sigs:</span>
+                    <span>{tx.signatures?.size ?? 0}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <button
+              className="btn btn-primary btn-outline btn-sm mt-2 w-full"
+              data-testid="safe-dashboard-export-tx-btn"
+              onClick={() => {
+                try {
+                  const json = exportTx(safeAddress);
+                  const blob = new Blob([json], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `safe-txs.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (e: unknown) {
+                  console.error("Export error:", e);
+                }
+              }}
+              title="Export all transactions JSON to file"
             >
-              <span
-                className="font-semibold"
-                data-testid="safe-dashboard-current-tx-hash-label"
-              >
-                Tx Hash:
-              </span>
-              <span
-                className="max-w-[30%] truncate"
-                title={currentTxHash}
-                data-testid="safe-dashboard-current-tx-hash-value"
-              >
-                {currentTxHash}
-              </span>
-              <span
-                className="font-semibold"
-                data-testid="safe-dashboard-current-tx-sigs-label"
-              >
-                Signatures:
-              </span>
-              <span data-testid="safe-dashboard-current-tx-sigs-value">
-                {currentTx.signatures?.size ?? 0}
-              </span>
-            </Link>
+              Export Transactions
+            </button>
           </AppCard>
         )}
       </div>
+
+      {/* Token Balances Section */}
+      {safeInfo && safeInfo.deployed && !unavailable && chain?.id && (
+        <TokenBalancesSection
+          safeAddress={safeAddress}
+          chainId={chain.id}
+        />
+      )}
+
       {/* Modal for deployment workflow */}
       <DeploymentModal
         open={modalOpen}

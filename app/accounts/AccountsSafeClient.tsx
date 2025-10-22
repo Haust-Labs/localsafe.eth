@@ -134,7 +134,26 @@ export default function AccountsPage() {
           </div>
         </div>
         {/* Toggle Deployed/Undeployed */}
-        <div className="mb-4 flex justify-center">
+        <div className="mb-4 flex items-center justify-center gap-2">
+          <div
+            className="tooltip"
+            data-tip="Toggle between safes that are deployed on-chain vs. safes that are configured but not yet deployed"
+          >
+            <svg
+              className="h-4 w-4 text-base-content opacity-60"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
           <div className="form-control">
             <label className="label cursor-pointer gap-2">
               <span className="label-text">Undeployed</span>
@@ -208,14 +227,14 @@ export default function AccountsPage() {
           onClick={handleExport}
           data-testid="export-wallets-btn"
         >
-          Export Wallets
+          Export Safes
         </button>
         <button
           className="btn btn-secondary btn-outline btn-sm"
           onClick={handleImportClick}
           data-testid="import-wallets-btn"
         >
-          Import Wallets
+          Import Safes
         </button>
         <input
           type="file"

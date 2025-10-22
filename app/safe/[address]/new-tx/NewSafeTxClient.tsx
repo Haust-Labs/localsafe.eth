@@ -83,7 +83,7 @@ export default function NewSafeTxClient() {
   // Hooks
   const { address: safeAddress } = useParams();
   const router = useRouter();
-  const { buildSafeTransaction, getSafeTransactionHash, isOwner } = useSafe(
+  const { buildSafeTransaction, getSafeTransactionHash, isOwner, safeInfo } = useSafe(
     safeAddress as `0x${string}`,
   );
 
@@ -100,6 +100,7 @@ export default function NewSafeTxClient() {
     { name: string; type: string }[]
   >([]);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [customNonce, setCustomNonce] = useState<string>("");
   // Transactions array state
   const [transactions, setTransactions] = useState<
     {
@@ -126,8 +127,16 @@ export default function NewSafeTxClient() {
         data: tx.data,
         operation: tx.operation ?? 0,
       }));
+
+      // Parse custom nonce if provided
+      const nonce = customNonce ? parseInt(customNonce, 10) : undefined;
+      if (customNonce && (isNaN(nonce!) || nonce! < 0)) {
+        setError("Invalid nonce value");
+        return;
+      }
+
       // Build transaction using ProtocolKit
-      const safeTx = await buildSafeTransaction(txs);
+      const safeTx = await buildSafeTransaction(txs, nonce);
       if (!safeTx) {
         setError("Invalid transaction");
         return;
@@ -235,6 +244,41 @@ export default function NewSafeTxClient() {
             title="Build Transaction"
             data-testid="new-safe-tx-builder-card"
           >
+            {/* Quick Action Buttons */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setValue("0");
+                  setData("0x");
+                  setShowDataHex(false);
+                  setAbiJson("");
+                  setAbiMethods([]);
+                  setSelectedMethod("");
+                }}
+                data-testid="quick-action-native-currency"
+              >
+                Move Native Currency
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setValue("0");
+                  setShowDataHex(true);
+                  // ERC20 transfer function signature: transfer(address,uint256)
+                  const transferSelector = "0xa9059cbb";
+                  setData(transferSelector);
+                  setAbiJson("");
+                  setAbiMethods([]);
+                  setSelectedMethod("");
+                }}
+                data-testid="quick-action-tokens"
+              >
+                Move Tokens (ERC20)
+              </button>
+            </div>
             <form
               onSubmit={handleBuildTx}
               className="flex flex-col gap-4"
@@ -454,6 +498,25 @@ export default function NewSafeTxClient() {
                 </tbody>
               </table>
             </div>
+            {/* Nonce Input */}
+            {transactions.length > 0 && (
+              <div className="mt-4">
+                <label className="label">
+                  <span className="label-text text-sm">
+                    Custom Nonce (optional, current: {safeInfo?.nonce ?? "-"})
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  className="input input-bordered input-sm w-full"
+                  placeholder={`Leave empty for current nonce (${safeInfo?.nonce ?? ""})`}
+                  value={customNonce}
+                  onChange={(e) => setCustomNonce(e.target.value)}
+                  min="0"
+                  data-testid="new-safe-tx-nonce-input"
+                />
+              </div>
+            )}
             {/* Build Safe Transaction Button */}
             <button
               className="btn btn-primary mt-4"

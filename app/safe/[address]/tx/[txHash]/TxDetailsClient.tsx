@@ -30,7 +30,7 @@ export default function TxDetailsClient() {
     hasSigned,
     safeInfo,
   } = useSafe(safeAddress);
-  const { removeTransaction } = useSafeTxContext();
+  const { removeTransaction, exportTx, getAllTransactions } = useSafeTxContext();
 
   // Refs and state
   const toastRef = useRef<HTMLDivElement | null>(null);
@@ -125,6 +125,43 @@ export default function TxDetailsClient() {
     }
     setBroadcasting(false);
     setTimeout(() => setToast(null), 3000);
+  }
+
+  /**
+   * Export this single transaction as JSON
+   */
+  function handleExportSingle() {
+    if (!safeTx) return;
+    try {
+      const signatures = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).map((sig) => ({
+            signer: sig.signer,
+            data: sig.data,
+            isContractSignature: sig.isContractSignature,
+          }))
+        : [];
+
+      const txData = {
+        data: safeTx.data,
+        signatures,
+      };
+
+      const json = JSON.stringify({ tx: txData }, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `safe-tx-nonce-${safeTx.data.nonce}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setToast({ type: "success", message: "Transaction exported!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Export error:", e);
+      setToast({ type: "error", message: "Export failed" });
+      setTimeout(() => setToast(null), 3000);
+    }
   }
 
   return (
@@ -325,6 +362,15 @@ export default function TxDetailsClient() {
                   ) : (
                     "Broadcast Transaction"
                   )}
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={handleExportSingle}
+                  disabled={!safeTx}
+                  title="Export this transaction as JSON"
+                  data-testid="tx-details-export-btn"
+                >
+                  Export Transaction
                 </button>
               </div>
               {/* BroadcastModal for broadcast feedback */}

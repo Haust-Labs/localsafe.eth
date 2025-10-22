@@ -336,6 +336,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
         data: string;
         operation?: number;
       }>,
+      nonce?: number,
     ): Promise<EthSafeTransaction | null> => {
       const kit = kitRef.current;
       if (!kit) return null;
@@ -347,9 +348,16 @@ export default function useSafe(safeAddress: `0x${string}`) {
           data: tx.data || "0x",
         }));
 
-        const safeTx = await kit.createTransaction({
+        const options: any = {
           transactions: normalizedTxs,
-        });
+        };
+
+        // Add nonce if provided
+        if (nonce !== undefined) {
+          options.options = { nonce };
+        }
+
+        const safeTx = await kit.createTransaction(options);
         // txHash no longer needed
         saveTransaction(safeAddress, safeTx);
         return safeTx;
