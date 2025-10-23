@@ -9,12 +9,17 @@ import { useChainManager } from "../hooks/useChainManager";
 import { NetworkFormState } from "../utils/types";
 import SunSvg from "../assets/svg/SunSvg";
 import MoonSvg from "../assets/svg/MoonSvg";
+import WalletConnectSvg from "../assets/svg/WalletConnectSvg";
+import { useWalletConnect } from "../provider/WalletConnectProvider";
+import WalletConnectModal from "./WalletConnectModal";
 
 export default function NavBar() {
   const { isConnected, chain, connector } = useAccount();
   const { configChains, getViemChainFromId } = useChainManager();
+  const { sessions, pendingProposal } = useWalletConnect();
 
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
+  const [wcModalOpen, setWcModalOpen] = useState(false);
   const [showNetworkFormIndicator, setShowNetworkFormIndicator] =
     useState(false);
   const [suggestedFormState, setSuggestedFormState] = useState<
@@ -23,6 +28,8 @@ export default function NavBar() {
 
   const handleOpenNetworkModal = () => setNetworkModalOpen(true);
   const handleCloseNetworkModal = () => setNetworkModalOpen(false);
+  const handleOpenWcModal = () => setWcModalOpen(true);
+  const handleCloseWcModal = () => setWcModalOpen(false);
 
   // Callback to check the chain against configChains and viewm chains
   const checkChain = useCallback(async () => {
@@ -93,6 +100,19 @@ export default function NavBar() {
         </Link>
       </div>
       <div className="flex items-center">
+        <button
+          className="btn btn-ghost btn-circle relative"
+          onClick={handleOpenWcModal}
+          title="WalletConnect"
+        >
+          <WalletConnectSvg className="h-5 w-5" />
+          {(sessions.length > 0 || pendingProposal) && (
+            <div className="badge badge-primary badge-xs absolute right-1 top-1">
+              {pendingProposal ? "!" : sessions.length}
+            </div>
+          )}
+        </button>
+        <div className="divider divider-horizontal mx-1"></div>
         <label className="swap swap-rotate">
           <input type="checkbox" className="theme-controller" value="light" />
           <SunSvg />
@@ -116,6 +136,10 @@ export default function NavBar() {
               ? suggestedFormState
               : undefined
           }
+        />
+        <WalletConnectModal
+          open={wcModalOpen}
+          onClose={handleCloseWcModal}
         />
       </div>
     </nav>
