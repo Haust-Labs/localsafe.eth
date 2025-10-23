@@ -77,6 +77,7 @@ export default function SafeDashboardClient({
     async function handleSharedLinks() {
       const importTxParam = searchParams.get("importTx");
       const importSigParam = searchParams.get("importSig");
+      const urlChainId = searchParams.get("chainId");
 
       if (importTxParam) {
         try {
@@ -85,13 +86,14 @@ export default function SafeDashboardClient({
 
           if (parsed.tx && parsed.tx.data) {
             // Import the full transaction with signatures
-            const chainId = chain?.id ? String(chain.id) : undefined;
+            // Use chainId from URL if provided, otherwise use connected chain
+            const chainId = urlChainId || (chain?.id ? String(chain.id) : undefined);
             importTx(safeAddress, JSON.stringify(parsed), chainId);
-            // Clear URL parameter
+            // Clear URL parameters
             const newUrl = window.location.pathname;
             window.history.replaceState({}, "", newUrl);
             // Show success message
-            alert("Transaction imported successfully!");
+            alert(`Transaction imported successfully!${urlChainId && chain?.id && String(chain.id) !== urlChainId ? ` (Chain ID: ${urlChainId})` : ''}`);
           }
         } catch (e) {
           console.error("Failed to import transaction from URL:", e);
@@ -104,7 +106,8 @@ export default function SafeDashboardClient({
 
           if (parsed.signature && parsed.txHash) {
             // Find the transaction by hash
-            const chainId = chain?.id ? String(chain.id) : undefined;
+            // Use chainId from URL if provided, otherwise use connected chain
+            const chainId = urlChainId || (chain?.id ? String(chain.id) : undefined);
             const allTransactions = getAllTransactions(safeAddress, chainId);
 
             // Search for transaction matching the hash

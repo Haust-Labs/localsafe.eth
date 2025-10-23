@@ -245,7 +245,7 @@ export default function TxDetailsClient() {
    * Share transaction link with all signatures
    */
   function handleShareLink() {
-    if (!safeTx) return;
+    if (!safeTx || !chain) return;
     try {
       const signatures = safeTx.signatures
         ? Array.from(safeTx.signatures.values()).map((sig) => ({
@@ -262,7 +262,7 @@ export default function TxDetailsClient() {
 
       const encoded = btoa(JSON.stringify({ tx: txData }));
       const baseUrl = window.location.origin;
-      const shareUrl = `${baseUrl}/safe/${safeAddress}?importTx=${encodeURIComponent(encoded)}`;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importTx=${encodeURIComponent(encoded)}&chainId=${chain.id}`;
 
       navigator.clipboard.writeText(shareUrl);
       setToast({ type: "success", message: "Share link copied to clipboard!" });
@@ -278,7 +278,7 @@ export default function TxDetailsClient() {
    * Share signature link for this transaction
    */
   function handleShareSignature() {
-    if (!safeTx) return;
+    if (!safeTx || !chain) return;
     try {
       if (!connectedAddress) {
         setToast({ type: "error", message: "No wallet connected" });
@@ -307,7 +307,7 @@ export default function TxDetailsClient() {
 
       const encoded = btoa(JSON.stringify({ signature: signatureData, txHash }));
       const baseUrl = window.location.origin;
-      const shareUrl = `${baseUrl}/safe/${safeAddress}?importSig=${encodeURIComponent(encoded)}`;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importSig=${encodeURIComponent(encoded)}&chainId=${chain.id}`;
 
       navigator.clipboard.writeText(shareUrl);
       setToast({ type: "success", message: "Signature link copied to clipboard!" });
