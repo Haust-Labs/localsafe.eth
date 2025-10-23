@@ -53,6 +53,11 @@ export default function TxDetailsClient() {
     eip712Hash: string;
   } | null>(null);
 
+  // Check if current user has signed this specific transaction
+  const hasSignedThisTx = safeTx && connectedAddress
+    ? safeTx.signatures?.has(connectedAddress.toLowerCase()) ?? false
+    : false;
+
   // Effects
   /**
    * Fetch the specific transaction by hash
@@ -563,13 +568,13 @@ export default function TxDetailsClient() {
                 <button
                   className="btn btn-success"
                   onClick={handleSign}
-                  disabled={!isOwner || signing || hasSigned}
+                  disabled={!isOwner || signing || hasSignedThisTx}
                   title={"Signing tx"}
                   data-testid="tx-details-sign-btn"
                 >
                   {!isOwner ? (
                     "Only Safe owners can sign"
-                  ) : hasSigned ? (
+                  ) : hasSignedThisTx ? (
                     "Already Signed"
                   ) : signing ? (
                     <div className="flex items-center">
@@ -623,7 +628,7 @@ export default function TxDetailsClient() {
                 <button
                   className="btn btn-accent btn-outline btn-sm"
                   onClick={handleShareSignature}
-                  disabled={!safeTx || !hasSigned}
+                  disabled={!safeTx || !hasSignedThisTx}
                   title="Copy shareable link with only your signature"
                   data-testid="tx-details-share-signature-btn"
                 >

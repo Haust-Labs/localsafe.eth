@@ -213,10 +213,48 @@ export default function useSafe(safeAddress: `0x${string}`) {
           setUnavailable(true);
         }
       } else {
-        setSafeInfo(null);
-        kitRef.current = null;
-        setIsOwner(false);
-        setUnavailable(true);
+        // Safe not in local storage - try to fetch directly from blockchain
+        try {
+          const provider = await getMinimalEIP1193Provider(connector);
+          if (!provider) throw new Error("No provider available");
+          // Try to connect to the Safe directly
+          const kit = await connectSafe(
+            safeAddress as `0x${string}`,
+            provider,
+            signer as `0x${string}`,
+          );
+          kitRef.current = kit;
+          const [owners, threshold, version, balance, nonce] =
+            await Promise.all([
+              kit.getOwners(),
+              kit.getThreshold(),
+              kit.getContractVersion(),
+              kit.getBalance(),
+              kit.getNonce(),
+            ]);
+          if (cancelled) return;
+          setSafeInfo({
+            owners: owners as `0x${string}`[],
+            balance: BigInt(balance),
+            threshold,
+            version,
+            chainId,
+            deployed: true,
+            nonce,
+          });
+          setIsOwner(await kit.isOwner(signer as `0x${string}`));
+          setUnavailable(false);
+        } catch (e: unknown) {
+          if (e instanceof Error) {
+            setError(e.message);
+          } else {
+            setError("Failed to fetch Safe data from chain");
+          }
+          setSafeInfo(null);
+          kitRef.current = null;
+          setIsOwner(false);
+          setUnavailable(true);
+        }
       }
       setIsLoading(false);
     }
