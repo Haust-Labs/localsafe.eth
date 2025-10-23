@@ -71,5 +71,7 @@ export const NETWORK_FORM_DEFAULTS = {
   rpcUrl: "",
   blockExplorerUrl: "",
   blockExplorerName: "",
+  multiSendAddress: "",
+  multiSendCallOnlyAddress: "",
   nativeCurrency: { name: "", symbol: "", decimals: 18 },
 };

@@ -98,7 +98,7 @@ test("should create a new safe account and navigate to dashboard", async ({
     "0x",
   );
 
-  // Click Create Safe
+  // Click Deploy New Safe
   await page.getByTestId("create-safe-btn").click();
 
   // Wait for deployment modal and assert modal content
@@ -217,7 +217,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
     page.locator('[data-testid="predicted-safe-address-value"]'),
   ).not.toHaveText("0x");
 
-  // Click Create Safe
+  // Click Deploy New Safe
   await page.locator('[data-testid="add-accounts-btn"]').click();
 
   // Wait to be navigated back to accounts page

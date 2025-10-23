@@ -3,6 +3,7 @@
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import BtnCancel from "@/app/components/BtnCancel";
+import NetworkModal from "@/app/components/NetworkModal";
 import { useState } from "react";
 import { useChains } from "wagmi";
 import { useRouter } from "next/navigation";
@@ -36,6 +37,7 @@ export default function ConnectSafeClient() {
   const [selectedChain, setSelectedChain] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [networkModalOpen, setNetworkModalOpen] = useState(false);
 
   /**
    * Handle adding an existing safe to the wallet.
@@ -111,7 +113,7 @@ export default function ConnectSafeClient() {
         <div className="text-base-content text-sm">
           You can only add Safe accounts that are already deployed on the
           selected network. If your Safe is not yet deployed, please use the
-          Create Safe flow.
+          Deploy New Safe flow.
         </div>
 
         {/* Form Safe Name, Address, Network Select, Error, Add Button */}
@@ -151,7 +153,14 @@ export default function ConnectSafeClient() {
           <select
             className="select select-bordered w-full"
             value={selectedChain}
-            onChange={(e) => setSelectedChain(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value === "add-network") {
+                setNetworkModalOpen(true);
+                e.target.value = selectedChain; // Reset to previous value
+              } else {
+                setSelectedChain(e.target.value);
+              }
+            }}
             disabled={loading}
             data-testid="network-select"
           >
@@ -163,6 +172,9 @@ export default function ConnectSafeClient() {
                 {chain.name}
               </option>
             ))}
+            <option value="add-network" className="font-semibold">
+              + Edit Networks
+            </option>
           </select>
         </div>
         {error && <div className="alert alert-error mb-4">{error}</div>}
@@ -175,6 +187,11 @@ export default function ConnectSafeClient() {
           {loading ? "Adding..." : "Add Safe"}
         </button>
       </AppCard>
+
+      <NetworkModal
+        open={networkModalOpen}
+        onClose={() => setNetworkModalOpen(false)}
+      />
     </AppSection>
   );
 }

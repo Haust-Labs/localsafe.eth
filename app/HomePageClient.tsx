@@ -18,7 +18,7 @@ export default function HomePageClient() {
     <AppSection className="max-w-2xl self-center">
       <AppCard>
         <h2 className="mb-4 text-center text-4xl font-bold">
-          Welcome to MSIG UI
+          Welcome to localsafe.eth
         </h2>
         <p className="mb-8 text-center text-xl">
           Your local safe wallet app to manage safe accounts. Connect your

@@ -10,14 +10,18 @@ import {
 } from "@/app/utils/constants";
 import React, { useEffect, useState, useRef } from "react";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { ImportTxPreview, SafeDeployStep } from "@/app/utils/types";
-import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { EthSafeTransaction, EthSafeSignature } from "@safe-global/protocol-kit";
 import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
+import TokenBalancesSection from "@/app/components/TokenBalancesSection";
+import ManageOwnersModal from "@/app/components/ManageOwnersModal";
+import ConfigureMultiSendModal from "@/app/components/ConfigureMultiSendModal";
+import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 
 /**
  * SafeDashboardClient component that displays the dashboard for a specific safe, including its details and actions.
@@ -33,6 +37,7 @@ export default function SafeDashboardClient({
   // Try to get the name from addressBook for the current chain
   const { chain } = useAccount();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     safeName,
     safeInfo,
@@ -43,18 +48,23 @@ export default function SafeDashboardClient({
     kit,
     deployUndeployedSafe,
     getSafeTransactionCurrent,
+    createBatchedOwnerManagementTransaction,
   } = useSafe(safeAddress);
   // Hooks
-  const { exportTx, importTx } = useSafeTxContext();
+  const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction} = useSafeTxContext();
+  const { setSafeMultiSendConfig, getSafeMultiSendConfig } = useSafeWalletContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
+  const [manageOwnersModalOpen, setManageOwnersModalOpen] = useState(false);
+  const [multiSendModalOpen, setMultiSendModalOpen] = useState(false);
   const [deploySteps, setDeploySteps] =
     useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
   const [currentTx, setCurrentTx] = useState<EthSafeTransaction | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<string | null>(null);
+  const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importPreview, setImportPreview] = useState<
@@ -62,30 +72,128 @@ export default function SafeDashboardClient({
   >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch current transaction if any
+  // Handle shared transaction or signature links
+  useEffect(() => {
+    if (!kit) return;
+
+    async function handleSharedLinks() {
+      const importTxParam = searchParams.get("importTx");
+      const importSigParam = searchParams.get("importSig");
+
+      if (importTxParam) {
+        try {
+          const decoded = atob(decodeURIComponent(importTxParam));
+          const parsed = JSON.parse(decoded);
+
+          if (parsed.tx && parsed.tx.data) {
+            // Import the full transaction with signatures
+            const chainId = chain?.id ? String(chain.id) : undefined;
+            importTx(safeAddress, JSON.stringify(parsed), chainId);
+            // Clear URL parameter
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, "", newUrl);
+            // Show success message
+            alert("Transaction imported successfully!");
+          }
+        } catch (e) {
+          console.error("Failed to import transaction from URL:", e);
+          alert("Failed to import transaction from shared link");
+        }
+      } else if (importSigParam) {
+        try {
+          const decoded = atob(decodeURIComponent(importSigParam));
+          const parsed = JSON.parse(decoded);
+
+          if (parsed.signature && parsed.txHash) {
+            // Find the transaction by hash
+            const chainId = chain?.id ? String(chain.id) : undefined;
+            const allTransactions = getAllTransactions(safeAddress, chainId);
+
+            // Search for transaction matching the hash
+            let matchingTx: EthSafeTransaction | null = null;
+            for (const tx of allTransactions) {
+              if (!kit) break;
+              const hash = await kit.getTransactionHash(tx);
+              if (hash === parsed.txHash) {
+                matchingTx = tx;
+                break;
+              }
+            }
+
+            if (matchingTx) {
+              // Add the signature to the transaction
+              const ethSignature = new EthSafeSignature(
+                parsed.signature.signer,
+                parsed.signature.data,
+                parsed.signature.isContractSignature
+              );
+              matchingTx.addSignature(ethSignature);
+              saveTransaction(safeAddress, matchingTx);
+
+              // Clear URL parameter
+              const newUrl = window.location.pathname;
+              window.history.replaceState({}, "", newUrl);
+              // Show success message
+              alert("Signature added successfully!");
+            } else {
+              alert("Transaction not found. Please import the full transaction first.");
+            }
+          }
+        } catch (e) {
+          console.error("Failed to import signature from URL:", e);
+          alert("Failed to import signature from shared link");
+        }
+      }
+    }
+
+    handleSharedLinks();
+  }, [kit, searchParams, safeAddress, importTx, getAllTransactions, saveTransaction]);
+
+  // Fetch all transactions if any
   useEffect(() => {
     if (!kit || isLoading) return; // Wait for kit to be ready
     let cancelled = false;
-    async function fetchTx() {
+    const safeKit = kit; // Capture kit in a const for TypeScript
+    async function fetchTxs() {
       try {
-        const tx = await getSafeTransactionCurrent();
-        const txHash = await kit?.getTransactionHash(tx as EthSafeTransaction);
-        if (!cancelled) {
-          setCurrentTx(tx);
-          setCurrentTxHash(txHash || null);
+        const chainId = chain?.id ? String(chain.id) : undefined;
+        const transactions = getAllTransactions(safeAddress, chainId);
+
+        if (transactions.length > 0) {
+          // Get hashes for all transactions
+          const txsWithHashes = await Promise.all(
+            transactions.map(async (tx) => ({
+              tx,
+              hash: await safeKit.getTransactionHash(tx),
+            }))
+          );
+
+          if (!cancelled) {
+            setAllTxs(txsWithHashes);
+            // Set first (lowest nonce) as current
+            setCurrentTx(txsWithHashes[0].tx);
+            setCurrentTxHash(txsWithHashes[0].hash);
+          }
+        } else {
+          if (!cancelled) {
+            setAllTxs([]);
+            setCurrentTx(null);
+            setCurrentTxHash(null);
+          }
         }
       } catch {
         if (!cancelled) {
+          setAllTxs([]);
           setCurrentTx(null);
           setCurrentTxHash(null);
         }
       }
     }
-    fetchTx();
+    fetchTxs();
     return () => {
       cancelled = true;
     };
-  }, [getSafeTransactionCurrent, kit, isLoading]);
+  }, [getAllTransactions, kit, isLoading, safeAddress]);
 
   // Handler for deploying undeployed Safe
   async function handleDeployUndeployedSafe() {
@@ -149,7 +257,8 @@ export default function SafeDashboardClient({
       !("error" in importPreview)
     ) {
       try {
-        importTx(safeAddress, JSON.stringify(importPreview));
+        const chainId = chain?.id ? String(chain.id) : undefined;
+        importTx(safeAddress, JSON.stringify(importPreview), chainId);
         setShowImportModal(false);
         setImportPreview(null);
         // Optionally reload tx
@@ -162,6 +271,52 @@ export default function SafeDashboardClient({
         }
       } catch {
         // Optionally show error toast
+      }
+    }
+  }
+
+  // Handle owner management batch update
+  async function handleOwnerManagementBatch(
+    changes: Array<{ type: "add" | "remove"; address: string }>,
+    newThreshold: number,
+  ) {
+    // Cast addresses to Address type for the hook
+    const typedChanges = changes.map(c => ({
+      type: c.type,
+      address: c.address as `0x${string}`,
+    }));
+    const txHash = await createBatchedOwnerManagementTransaction(typedChanges, newThreshold);
+    if (txHash) {
+      router.push(`/safe/${safeAddress}/tx/${txHash}`);
+    }
+  }
+
+  // Get current MultiSend config for this Safe
+  const currentMultiSendConfig = chain?.id
+    ? getSafeMultiSendConfig(String(chain.id), safeAddress)
+    : undefined;
+
+  // Handle MultiSend config save
+  function handleSaveMultiSendConfig(multiSend?: string, multiSendCallOnly?: string) {
+    if (chain?.id) {
+      setSafeMultiSendConfig(String(chain.id), safeAddress, multiSend, multiSendCallOnly);
+    }
+  }
+
+  // Handle transaction deletion
+  function handleDeleteTransaction(txHash: string, nonce: number) {
+    if (confirm("Are you sure you want to delete this transaction?")) {
+      const chainId = chain?.id ? String(chain.id) : undefined;
+      removeTransaction(safeAddress, txHash, nonce, chainId);
+      // Filter out the deleted transaction from the current list
+      const updatedTxs = allTxs.filter(({ hash }) => hash !== txHash);
+      setAllTxs(updatedTxs);
+      if (updatedTxs.length > 0) {
+        setCurrentTx(updatedTxs[0].tx);
+        setCurrentTxHash(updatedTxs[0].hash);
+      } else {
+        setCurrentTx(null);
+        setCurrentTxHash(null);
       }
     }
   }
@@ -186,7 +341,7 @@ export default function SafeDashboardClient({
           <div className="stat-title">Balance</div>
           <div className="stat-value text-primary flex gap-1">
             <p>
-              {safeInfo?.balance ? formatEther(safeInfo.balance) : "-"}{" "}
+              {safeInfo?.balance !== undefined ? formatEther(safeInfo.balance) : "-"}{" "}
               {chain?.nativeCurrency.symbol ?? ""}
             </p>
           </div>
@@ -223,47 +378,34 @@ export default function SafeDashboardClient({
             <span className="font-semibold">Version:</span>
             <span className="ml-2">{safeInfo?.version ?? "-"}</span>
           </div>
+          {/* Manage Owners Button */}
+          {safeInfo && safeInfo.deployed && isOwner && !unavailable && (
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                className="btn btn-outline btn-sm w-full"
+                onClick={() => setManageOwnersModalOpen(true)}
+              >
+                Manage Owners & Threshold
+              </button>
+              <button
+                className="btn btn-outline btn-sm w-full"
+                onClick={() => setMultiSendModalOpen(true)}
+              >
+                Configure MultiSend
+              </button>
+            </div>
+          )}
         </AppCard>
         {/* Actions in top right cell */}
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
-            {/* Transaction import/export buttons */}
+            {/* Transaction import button */}
             <div
               className="mb-2 flex gap-2"
               data-testid="safe-dashboard-actions-row"
             >
               <button
-                className="btn btn-primary btn-outline btn-sm"
-                data-testid="safe-dashboard-export-tx-btn"
-                onClick={() => {
-                  if (!currentTx) return;
-                  try {
-                    const json = exportTx(safeAddress);
-                    const blob = new Blob([json], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `safe-tx.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } catch (e: unknown) {
-                    console.error("Export error:", e);
-                  }
-                }}
-                title="Export transaction JSON to file"
-                disabled={
-                  !currentTx ||
-                  unavailable ||
-                  !isOwner ||
-                  !safeInfo?.deployed ||
-                  !!error ||
-                  isLoading
-                }
-              >
-                Export Tx
-              </button>
-              <button
-                className="btn btn-secondary btn-outline btn-sm"
+                className="btn btn-secondary btn-outline btn-sm w-full"
                 data-testid="safe-dashboard-import-tx-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import transaction JSON from file"
@@ -275,7 +417,7 @@ export default function SafeDashboardClient({
                   isLoading
                 }
               >
-                Import Tx
+                Import Transaction
               </button>
               <input
                 type="file"
@@ -351,7 +493,7 @@ export default function SafeDashboardClient({
                     onClick={handleGoToBuilder}
                     data-testid="safe-dashboard-go-to-builder-btn"
                   >
-                    Go to Builder
+                    Build New Transaction
                   </button>
                 </>
               )}
@@ -373,44 +515,81 @@ export default function SafeDashboardClient({
             )}
           </div>
         </AppCard>
-        {/* Current Transaction in bottom right cell */}
-        {currentTx && currentTxHash && (
+        {/* Current Transactions Queue in bottom right cell */}
+        {allTxs.length > 0 && (
           <AppCard
-            title="Current Transaction"
+            title="Current Transactions"
             testid="safe-dashboard-current-tx-card"
           >
-            <Link
-              className="btn btn-accent btn-outline flex w-full items-center gap-4 rounded"
-              data-testid="safe-dashboard-current-tx-link"
-              href={`/safe/${safeAddress}/tx/${currentTxHash}`}
-              title="View transaction details"
+            <div className="flex flex-col gap-2">
+              {allTxs.map(({ tx, hash }) => (
+                <div key={hash} className="flex gap-2 items-center">
+                  <Link
+                    className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
+                    data-testid={`safe-dashboard-current-tx-link-${hash}`}
+                    href={`/safe/${safeAddress}/tx/${hash}`}
+                    title="View transaction details"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Nonce:</span>
+                      <span className="font-mono">{tx.data.nonce}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Hash:</span>
+                      <span className="max-w-[120px] truncate font-mono text-xs" title={hash}>
+                        {hash}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Sigs:</span>
+                      <span>{tx.signatures?.size ?? 0}</span>
+                    </div>
+                  </Link>
+                  <button
+                    className="btn btn-ghost btn-sm btn-square"
+                    onClick={() => handleDeleteTransaction(hash, Number(tx.data.nonce))}
+                    title="Delete transaction"
+                    data-testid={`safe-dashboard-delete-tx-btn-${hash}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn btn-primary btn-outline btn-sm mt-2 w-full"
+              data-testid="safe-dashboard-export-tx-btn"
+              onClick={() => {
+                try {
+                  const chainId = chain?.id ? String(chain.id) : undefined;
+                  const json = exportTx(safeAddress, chainId);
+                  const blob = new Blob([json], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `safe-txs.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (e: unknown) {
+                  console.error("Export error:", e);
+                }
+              }}
+              title="Export all transactions JSON to file"
             >
-              <span
-                className="font-semibold"
-                data-testid="safe-dashboard-current-tx-hash-label"
-              >
-                Tx Hash:
-              </span>
-              <span
-                className="max-w-[30%] truncate"
-                title={currentTxHash}
-                data-testid="safe-dashboard-current-tx-hash-value"
-              >
-                {currentTxHash}
-              </span>
-              <span
-                className="font-semibold"
-                data-testid="safe-dashboard-current-tx-sigs-label"
-              >
-                Signatures:
-              </span>
-              <span data-testid="safe-dashboard-current-tx-sigs-value">
-                {currentTx.signatures?.size ?? 0}
-              </span>
-            </Link>
+              Export Transactions
+            </button>
           </AppCard>
         )}
       </div>
+
+      {/* Token Balances Section */}
+      {safeInfo && safeInfo.deployed && !unavailable && chain?.id && (
+        <TokenBalancesSection
+          safeAddress={safeAddress}
+          chainId={chain.id}
+        />
+      )}
+
       {/* Modal for deployment workflow */}
       <DeploymentModal
         open={modalOpen}
@@ -439,6 +618,24 @@ export default function SafeDashboardClient({
         }}
         importPreview={importPreview}
         onReplace={async () => handleImportTx(importPreview)}
+      />
+      {/* Manage Owners Modal */}
+      {safeInfo && (
+        <ManageOwnersModal
+          open={manageOwnersModalOpen}
+          onClose={() => setManageOwnersModalOpen(false)}
+          owners={safeInfo.owners}
+          threshold={safeInfo.threshold}
+          onBatchUpdate={handleOwnerManagementBatch}
+        />
+      )}
+      {/* Configure MultiSend Modal */}
+      <ConfigureMultiSendModal
+        open={multiSendModalOpen}
+        onClose={() => setMultiSendModalOpen(false)}
+        currentMultiSend={currentMultiSendConfig?.multiSendAddress}
+        currentMultiSendCallOnly={currentMultiSendConfig?.multiSendCallOnlyAddress}
+        onSave={handleSaveMultiSendConfig}
       />
     </AppSection>
   );

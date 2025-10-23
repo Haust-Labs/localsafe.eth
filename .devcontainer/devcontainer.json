@@ -1,5 +1,5 @@
 {
-  "name": "msig-ui-dev",
+  "name": "localsafe-dev",
   "dockerFile": "Dockerfile",
   "customizations": {
     "vscode": {

@@ -18,7 +18,69 @@ import {
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { mainnet, sepolia, anvil } from "wagmi/chains";
+import {
+  mainnet,
+  sepolia,
+  anvil,
+  gnosis,
+  polygon,
+  polygonZkEvm,
+  bsc,
+  optimism,
+  base,
+  linea,
+  scroll,
+  celo,
+  avalanche,
+  mantle,
+  arbitrum,
+  baseSepolia,
+  zkSync,
+  zora,
+} from "wagmi/chains";
+import ethereumIcon from "../assets/chainIcons/ethereum.svg";
+import arbitrumIcon from "../assets/chainIcons/arbitrum.svg";
+import optimismIcon from "../assets/chainIcons/optimism.svg";
+import baseIcon from "../assets/chainIcons/base.svg";
+import polygonIcon from "../assets/chainIcons/polygon.svg";
+import zkSyncIcon from "../assets/chainIcons/zksync.svg";
+import zoraIcon from "../assets/chainIcons/zora.svg";
+import scrollIcon from "../assets/chainIcons/scroll.svg";
+import lineaIcon from "../assets/chainIcons/linea.svg";
+import gnosisIcon from "../assets/chainIcons/gnosis.svg";
+import bscIcon from "../assets/chainIcons/bsc.svg";
+import avalancheIcon from "../assets/chainIcons/avalanche.svg";
+import celoIcon from "../assets/chainIcons/celo.svg";
+import mantleIcon from "../assets/chainIcons/mantle.svg";
+import hardhatIcon from "../assets/chainIcons/hardhat.svg";
+
+// Helper to add icon URLs to chains
+const addChainIcon = (chain: Chain, iconUrl: string): Chain => ({
+  ...chain,
+  iconUrl,
+} as Chain);
+
+// Default chains that should always be available with local SVG icons
+const DEFAULT_CHAINS: Chain[] = [
+  addChainIcon(mainnet, ethereumIcon.src),
+  addChainIcon(arbitrum, arbitrumIcon.src),
+  addChainIcon(optimism, optimismIcon.src),
+  addChainIcon(base, baseIcon.src),
+  addChainIcon(polygon, polygonIcon.src),
+  addChainIcon(polygonZkEvm, polygonIcon.src), // Uses same polygon icon
+  addChainIcon(zkSync, zkSyncIcon.src),
+  addChainIcon(zora, zoraIcon.src),
+  addChainIcon(scroll, scrollIcon.src),
+  addChainIcon(linea, lineaIcon.src),
+  addChainIcon(gnosis, gnosisIcon.src),
+  addChainIcon(bsc, bscIcon.src),
+  addChainIcon(avalanche, avalancheIcon.src),
+  addChainIcon(celo, celoIcon.src),
+  addChainIcon(mantle, mantleIcon.src),
+  addChainIcon(sepolia, ethereumIcon.src), // Uses ethereum icon
+  addChainIcon(baseSepolia, baseIcon.src), // Uses base icon
+  addChainIcon(anvil, hardhatIcon.src), // Uses hardhat icon for local dev
+];
 
 export interface WagmiConfigContextType {
   configChains: Chain[];
@@ -33,11 +95,7 @@ const WagmiConfigContext = createContext<WagmiConfigContextType | undefined>(
 export const WagmiConfigProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const [configChains, setConfigChains] = useState<Chain[]>([
-    mainnet,
-    sepolia,
-    anvil,
-  ]);
+  const [configChains, setConfigChains] = useState<Chain[]>(DEFAULT_CHAINS);
 
   const [chainsLoaded, setChainsLoaded] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -51,15 +109,17 @@ export const WagmiConfigProvider: React.FC<{
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
-      if (stored) {
-        try {
-          setConfigChains(JSON.parse(stored));
-        } catch {
-          setConfigChains([mainnet, sepolia, anvil]);
-        }
-      } else {
-        setConfigChains([mainnet, sepolia, anvil]);
-      }
+      setConfigChains(DEFAULT_CHAINS);
+      console.log(DEFAULT_CHAINS[5].iconUrl);
+      // if (stored) {
+      //   try {
+      //     setConfigChains(JSON.parse(stored));
+      //   } catch {
+      //     setConfigChains(DEFAULT_CHAINS);
+      //   }
+      // } else {
+      //   setConfigChains(DEFAULT_CHAINS);
+      // }
       setChainsLoaded(true);
     }
   }, []);
@@ -79,7 +139,7 @@ export const WagmiConfigProvider: React.FC<{
     if (!isMounted) return null;
 
     return getDefaultConfig({
-      appName: "MSIG UI",
+      appName: "localsafe.eth",
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
       chains: configChains as [typeof mainnet, ...[typeof mainnet]],
       ssr: false,

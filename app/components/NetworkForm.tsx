@@ -452,6 +452,49 @@ export default function NetworkForm({
           )}
         </fieldset>
       </div>
+
+      {/* Advanced Settings - MultiSend Configuration */}
+      <details className="collapse collapse-arrow bg-base-200">
+        <summary className="collapse-title text-sm font-medium">
+          Advanced Settings (Optional)
+        </summary>
+        <div className="collapse-content space-y-4">
+          <p className="text-xs text-gray-400 mb-2">
+            Configure MultiSend contract addresses for transaction batching. Leave empty to use Safe SDK defaults.
+          </p>
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">MultiSend Address (Optional)</legend>
+            <input
+              id="networkform-multisend"
+              className="input input-bordered w-full"
+              value={state.multiSendAddress || ""}
+              onChange={(e) => handleChange("multiSendAddress", e.target.value)}
+              placeholder="0x... (optional)"
+            />
+            <label className="label">
+              <span className="label-text-alt">
+                Used for batching multiple transactions together
+              </span>
+            </label>
+          </fieldset>
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">MultiSend Call Only Address (Optional)</legend>
+            <input
+              id="networkform-multisendcallonly"
+              className="input input-bordered w-full"
+              value={state.multiSendCallOnlyAddress || ""}
+              onChange={(e) => handleChange("multiSendCallOnlyAddress", e.target.value)}
+              placeholder="0x... (optional)"
+            />
+            <label className="label">
+              <span className="label-text-alt">
+                Used for call-only (no delegatecall) batched transactions
+              </span>
+            </label>
+          </fieldset>
+        </div>
+      </details>
+
       <div className="mt-4 flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-4">
           <button

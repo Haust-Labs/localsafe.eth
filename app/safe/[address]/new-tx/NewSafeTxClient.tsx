@@ -9,6 +9,9 @@ import useSafe from "@/app/hooks/useSafe";
 import { useParams, useRouter } from "next/navigation";
 import BtnCancel from "@/app/components/BtnCancel";
 import { AbiFunctionItem } from "@/app/utils/types";
+import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { useAccount } from "wagmi";
 
 /**
  * Helper to extract function names from ABI
@@ -83,15 +86,18 @@ export default function NewSafeTxClient() {
   // Hooks
   const { address: safeAddress } = useParams();
   const router = useRouter();
-  const { buildSafeTransaction, getSafeTransactionHash, isOwner } = useSafe(
+  const { chain } = useAccount();
+  const { buildSafeTransaction, getSafeTransactionHash, isOwner, safeInfo } = useSafe(
     safeAddress as `0x${string}`,
   );
+  const { getAllTransactions } = useSafeTxContext();
 
   // Form state
   const [to, setTo] = useState("");
   const [value, setValue] = useState("");
   const [data, setData] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [nonceWarning, setNonceWarning] = useState<string | null>(null);
   const [showDataHex, setShowDataHex] = useState(false);
   const [abiJson, setAbiJson] = useState("");
   const [abiMethods, setAbiMethods] = useState<string[]>([]);
@@ -100,6 +106,7 @@ export default function NewSafeTxClient() {
     { name: string; type: string }[]
   >([]);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [customNonce, setCustomNonce] = useState<string>("");
   // Transactions array state
   const [transactions, setTransactions] = useState<
     {
@@ -110,6 +117,56 @@ export default function NewSafeTxClient() {
       method: string;
     }[]
   >([]);
+
+  // Calculate next available nonce
+  const chainId = chain?.id ? String(chain.id) : undefined;
+  const queuedTransactions = getAllTransactions(safeAddress as `0x${string}`, chainId);
+  const nextAvailableNonce = React.useMemo(() => {
+    if (!safeInfo) return 0;
+
+    // Find highest nonce in queue
+    const queuedNonces = queuedTransactions.map((tx: EthSafeTransaction) => Number(tx.data.nonce));
+    const highestQueued = queuedNonces.length > 0 ? Math.max(...queuedNonces) : safeInfo.nonce - 1;
+
+    // Next available is highest queued + 1, or current Safe nonce if nothing queued
+    return Math.max(highestQueued + 1, safeInfo.nonce);
+  }, [safeInfo, queuedTransactions]);
+
+  // Set default nonce to next available
+  React.useEffect(() => {
+    if (nextAvailableNonce !== undefined) {
+      setCustomNonce(String(nextAvailableNonce));
+    }
+  }, [nextAvailableNonce]);
+
+  // Validate nonce whenever it changes
+  React.useEffect(() => {
+    if (!customNonce || !safeInfo) {
+      setNonceWarning(null);
+      return;
+    }
+
+    const nonce = parseInt(customNonce, 10);
+    if (isNaN(nonce)) {
+      setNonceWarning(null);
+      return;
+    }
+
+    // Check if nonce is already used on-chain
+    if (nonce < safeInfo.nonce) {
+      setNonceWarning(`⚠️ This nonce (${nonce}) has already been executed on-chain. Current on-chain nonce is ${safeInfo.nonce}.`);
+      return;
+    }
+
+    // Check if nonce is already in queue
+    const nonceInQueue = queuedTransactions.some((tx: EthSafeTransaction) => Number(tx.data.nonce) === nonce);
+    if (nonceInQueue) {
+      setNonceWarning(`⚠️ A transaction with nonce ${nonce} is already queued. Building this will overwrite it.`);
+      return;
+    }
+
+    setNonceWarning(null);
+  }, [customNonce, safeInfo, queuedTransactions]);
 
   /**
    * Build Safe transaction from the transactions list
@@ -126,8 +183,16 @@ export default function NewSafeTxClient() {
         data: tx.data,
         operation: tx.operation ?? 0,
       }));
+
+      // Parse custom nonce if provided
+      const nonce = customNonce ? parseInt(customNonce, 10) : undefined;
+      if (customNonce && (isNaN(nonce!) || nonce! < 0)) {
+        setError("Invalid nonce value");
+        return;
+      }
+
       // Build transaction using ProtocolKit
-      const safeTx = await buildSafeTransaction(txs);
+      const safeTx = await buildSafeTransaction(txs, nonce);
       if (!safeTx) {
         setError("Invalid transaction");
         return;
@@ -235,6 +300,41 @@ export default function NewSafeTxClient() {
             title="Build Transaction"
             data-testid="new-safe-tx-builder-card"
           >
+            {/* Quick Action Buttons */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setValue("0");
+                  setData("0x");
+                  setShowDataHex(false);
+                  setAbiJson("");
+                  setAbiMethods([]);
+                  setSelectedMethod("");
+                }}
+                data-testid="quick-action-native-currency"
+              >
+                Move Native Currency
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setValue("0");
+                  setShowDataHex(true);
+                  // ERC20 transfer function signature: transfer(address,uint256)
+                  const transferSelector = "0xa9059cbb";
+                  setData(transferSelector);
+                  setAbiJson("");
+                  setAbiMethods([]);
+                  setSelectedMethod("");
+                }}
+                data-testid="quick-action-tokens"
+              >
+                Move Tokens (ERC20)
+              </button>
+            </div>
             <form
               onSubmit={handleBuildTx}
               className="flex flex-col gap-4"
@@ -382,6 +482,66 @@ export default function NewSafeTxClient() {
                   {error}
                 </div>
               )}
+              {/* Nonce Input */}
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-nonce-fieldset"
+              >
+                <legend className="fieldset-legend">Transaction Nonce</legend>
+                <div className="alert alert-info mb-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    className="stroke-current shrink-0 w-6 h-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  <div className="text-sm">
+                    <p className="font-semibold">Auto-selected: Next Available Nonce</p>
+                    <p>Automatically set to {nextAvailableNonce}. You can change it manually if needed.</p>
+                  </div>
+                </div>
+                {nonceWarning && (
+                  <div className="alert alert-warning mb-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="stroke-current shrink-0 h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <div className="text-sm">
+                      {nonceWarning}
+                    </div>
+                  </div>
+                )}
+                <input
+                  type="number"
+                  className={`input input-bordered w-full ${nonceWarning ? "input-warning" : ""}`}
+                  placeholder={`Next available: ${nextAvailableNonce}`}
+                  value={customNonce}
+                  onChange={(e) => setCustomNonce(e.target.value)}
+                  min="0"
+                  data-testid="new-safe-tx-nonce-input"
+                />
+                <label className="label">
+                  <span className="label-text-alt">
+                    On-chain nonce: {safeInfo?.nonce ?? "-"} | Queued transactions: {queuedTransactions.length}
+                  </span>
+                </label>
+              </fieldset>
               {/* Submit Button */}
               <button
                 type="submit"
@@ -399,6 +559,27 @@ export default function NewSafeTxClient() {
             title="Transactions List"
             data-testid="new-safe-tx-list-card"
           >
+            {transactions.length > 1 && (
+              <div className="alert alert-info mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  className="stroke-current shrink-0 w-6 h-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <div className="text-sm">
+                  <p className="font-semibold">MultiSend Batching</p>
+                  <p>These {transactions.length} transactions will be batched together using MultiSend</p>
+                </div>
+              </div>
+            )}
             <div
               className="overflow-x-auto"
               data-testid="new-safe-tx-list-table-row"
@@ -465,7 +646,7 @@ export default function NewSafeTxClient() {
               }
               data-testid="new-safe-tx-build-btn"
             >
-              Build Safe Transaction
+              Build/Batch Safe Transaction
             </button>
           </AppCard>
         </div>

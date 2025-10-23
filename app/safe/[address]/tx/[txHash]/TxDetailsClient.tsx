@@ -11,6 +11,7 @@ import DataPreview from "@/app/components/DataPreview";
 import BtnCancel from "@/app/components/BtnCancel";
 import { BroadcastModal } from "@/app/components/BroadcastModal";
 import { useAccount } from "wagmi";
+import { ethers } from "ethers";
 
 /**
  * TxDetailsClient component that displays the details of a specific transaction and allows signing and broadcasting.
@@ -19,8 +20,8 @@ import { useAccount } from "wagmi";
  */
 export default function TxDetailsClient() {
   // Hooks
-  const { chain } = useAccount();
-  const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
+  const { chain, address: connectedAddress } = useAccount();
+  const { address: safeAddress, txHash } = useParams<{ address: `0x${string}`; txHash: string }>();
   const router = useRouter();
   const {
     getSafeTransactionCurrent,
@@ -29,8 +30,9 @@ export default function TxDetailsClient() {
     isOwner,
     hasSigned,
     safeInfo,
+    kit,
   } = useSafe(safeAddress);
-  const { removeTransaction } = useSafeTxContext();
+  const { removeTransaction, exportTx, getAllTransactions } = useSafeTxContext();
 
   // Refs and state
   const toastRef = useRef<HTMLDivElement | null>(null);
@@ -46,18 +48,42 @@ export default function TxDetailsClient() {
     message: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eip712Data, setEip712Data] = useState<{
+    domainHash: string;
+    messageHash: string;
+    eip712Hash: string;
+  } | null>(null);
+  const [decodedTransfer, setDecodedTransfer] = useState<{
+    type: "ERC20_TRANSFER";
+    recipient: string;
+    amount: string;
+  } | null>(null);
 
   // Effects
   /**
-   * Fetch the current safe transaction when the component mounts or when dependencies change.
+   * Fetch the specific transaction by hash
    */
   useEffect(() => {
     setLoading(true);
     let cancelled = false;
     async function fetchTx() {
       try {
-        const tx = await getSafeTransactionCurrent();
-        if (!cancelled) setSafeTx(tx);
+        if (!kit || !chain) return;
+
+        const chainId = String(chain.id);
+        const allTxs = getAllTransactions(safeAddress, chainId);
+
+        // Find the transaction matching this hash
+        let matchingTx: EthSafeTransaction | null = null;
+        for (const tx of allTxs) {
+          const hash = await kit.getTransactionHash(tx);
+          if (hash === txHash) {
+            matchingTx = tx;
+            break;
+          }
+        }
+
+        if (!cancelled) setSafeTx(matchingTx);
       } catch {
         if (!cancelled) {
           setToast({ type: "error", message: "Could not load transaction" });
@@ -71,7 +97,64 @@ export default function TxDetailsClient() {
     return () => {
       cancelled = true;
     };
-  }, [getSafeTransactionCurrent, safeInfo]);
+  }, [kit, chain, txHash, safeAddress, getAllTransactions]);
+
+  /**
+   * Calculate EIP-712 hashes when transaction is loaded
+   */
+  useEffect(() => {
+    if (!safeTx || !safeInfo || !chain) return;
+
+    try {
+      // Construct EIP-712 typed data for Safe transactions
+      const domain = {
+        chainId: chain.id,
+        verifyingContract: safeAddress,
+      };
+
+      const types = {
+        SafeTx: [
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+          { name: "operation", type: "uint8" },
+          { name: "safeTxGas", type: "uint256" },
+          { name: "baseGas", type: "uint256" },
+          { name: "gasPrice", type: "uint256" },
+          { name: "gasToken", type: "address" },
+          { name: "refundReceiver", type: "address" },
+          { name: "nonce", type: "uint256" },
+        ],
+      };
+
+      const message = {
+        to: safeTx.data.to,
+        value: safeTx.data.value,
+        data: safeTx.data.data,
+        operation: safeTx.data.operation,
+        safeTxGas: safeTx.data.safeTxGas,
+        baseGas: safeTx.data.baseGas,
+        gasPrice: safeTx.data.gasPrice,
+        gasToken: safeTx.data.gasToken,
+        refundReceiver: safeTx.data.refundReceiver,
+        nonce: safeTx.data.nonce,
+      };
+
+      // Calculate hashes
+      const domainHash = ethers.TypedDataEncoder.hashDomain(domain);
+      const messageHash = ethers.TypedDataEncoder.hashStruct("SafeTx", types, message);
+      const eip712Hash = ethers.TypedDataEncoder.hash(domain, types, message);
+
+      setEip712Data({
+        domainHash,
+        messageHash,
+        eip712Hash,
+      });
+    } catch (err) {
+      console.error("Failed to calculate EIP-712 hashes:", err);
+      setEip712Data(null);
+    }
+  }, [safeTx, safeInfo, safeAddress, chain]);
 
   /**
    * Handle signing the transaction.
@@ -125,6 +208,121 @@ export default function TxDetailsClient() {
     }
     setBroadcasting(false);
     setTimeout(() => setToast(null), 3000);
+  }
+
+  /**
+   * Export this single transaction as JSON
+   */
+  function handleExportSingle() {
+    if (!safeTx) return;
+    try {
+      const signatures = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).map((sig) => ({
+            signer: sig.signer,
+            data: sig.data,
+            isContractSignature: sig.isContractSignature,
+          }))
+        : [];
+
+      const txData = {
+        data: safeTx.data,
+        signatures,
+      };
+
+      const json = JSON.stringify({ tx: txData }, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `safe-tx-nonce-${safeTx.data.nonce}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setToast({ type: "success", message: "Transaction exported!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Export error:", e);
+      setToast({ type: "error", message: "Export failed" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  }
+
+  /**
+   * Share transaction link with all signatures
+   */
+  function handleShareLink() {
+    if (!safeTx) return;
+    try {
+      const signatures = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).map((sig) => ({
+            signer: sig.signer,
+            data: sig.data,
+            isContractSignature: sig.isContractSignature,
+          }))
+        : [];
+
+      const txData = {
+        data: safeTx.data,
+        signatures,
+      };
+
+      const encoded = btoa(JSON.stringify({ tx: txData }));
+      const baseUrl = window.location.origin;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importTx=${encodeURIComponent(encoded)}`;
+
+      navigator.clipboard.writeText(shareUrl);
+      setToast({ type: "success", message: "Share link copied to clipboard!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Share link error:", e);
+      setToast({ type: "error", message: "Failed to create share link" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  }
+
+  /**
+   * Share signature link for this transaction
+   */
+  function handleShareSignature() {
+    if (!safeTx) return;
+    try {
+      if (!connectedAddress) {
+        setToast({ type: "error", message: "No wallet connected" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      // Find the signature for the current user
+      const userSignature = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).find(
+            (sig) => sig.signer.toLowerCase() === connectedAddress.toLowerCase()
+          )
+        : null;
+
+      if (!userSignature) {
+        setToast({ type: "error", message: "You haven't signed this transaction yet" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      const signatureData = {
+        signer: userSignature.signer,
+        data: userSignature.data,
+        isContractSignature: userSignature.isContractSignature,
+      };
+
+      const encoded = btoa(JSON.stringify({ signature: signatureData, txHash }));
+      const baseUrl = window.location.origin;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importSig=${encodeURIComponent(encoded)}`;
+
+      navigator.clipboard.writeText(shareUrl);
+      setToast({ type: "success", message: "Signature link copied to clipboard!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Share signature error:", e);
+      setToast({ type: "error", message: "Failed to create signature link" });
+      setTimeout(() => setToast(null), 3000);
+    }
   }
 
   return (
@@ -199,7 +397,11 @@ export default function TxDetailsClient() {
                   data-testid="tx-details-data-row"
                 >
                   <span className="font-semibold">Data</span>
-                  <DataPreview value={safeTx.data.data} />
+                  {safeTx.data.data && safeTx.data.data !== "0x" ? (
+                    <DataPreview value={safeTx.data.data} />
+                  ) : (
+                    <span className="text-gray-400">No calldata (0x)</span>
+                  )}
                 </div>
                 <div
                   className="flex items-center justify-between px-4 py-3"
@@ -279,11 +481,107 @@ export default function TxDetailsClient() {
                   )}
                 </div>
               </div>
+
+              {/* EIP-712 Data Section */}
+              {eip712Data && safeTx && chain && (
+                <div className="mt-4 space-y-4">
+                  <div className="divider">EIP-712 Signature Data</div>
+
+                  <div className="bg-base-200 rounded-box p-4 space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Domain Hash</h4>
+                      <p className="font-mono text-xs break-all">{eip712Data.domainHash}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Message Hash</h4>
+                      <p className="font-mono text-xs break-all">{eip712Data.messageHash}</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-200 mb-1">
+                        EIP-712 Digest (Signing Hash)
+                      </h4>
+                      <p className="font-mono text-xs text-blue-800 dark:text-blue-200 break-all">
+                        {eip712Data.eip712Hash}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cyfrin Tools Links */}
+                  <div className="alert alert-success">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      className="stroke-current shrink-0 w-6 h-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      ></path>
+                    </svg>
+                    <div className="text-sm flex-1">
+                      <p className="font-semibold mb-2">Cyfrin Tools</p>
+                      <div className="flex flex-wrap gap-2">
+                        {safeTx.data.data && safeTx.data.data !== "0x" && (
+                          <a
+                            href={`https://tools.cyfrin.io/abi-encoding?data=${safeTx.data.data}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-xs btn-outline"
+                          >
+                            🔍 Decode Calldata
+                          </a>
+                        )}
+                        <a
+                          href={`https://tools.cyfrin.io/safe-hash?chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-xs btn-outline"
+                        >
+                          🔐 Verify EIP-712 Hash
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Alert */}
+              <div className="alert alert-info">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  className="stroke-current shrink-0 w-6 h-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <div className="text-sm">
+                  <p className="font-semibold">Transaction Queued</p>
+                  <p>This transaction is saved and visible to all owners. Sign it now or return to the dashboard.</p>
+                </div>
+              </div>
+
               {/* Action buttons: Sign and Broadcast */}
               <div
                 className="mt-4 flex flex-wrap gap-2"
                 data-testid="tx-details-actions-row"
               >
+                <button
+                  className="btn btn-outline btn-primary"
+                  onClick={() => router.push(`/safe/${safeAddress}`)}
+                  title="Return to dashboard without signing"
+                  data-testid="tx-details-queue-btn"
+                >
+                  Back to Dashboard (Queued)
+                </button>
                 <button
                   className="btn btn-success"
                   onClick={handleSign}
@@ -325,6 +623,33 @@ export default function TxDetailsClient() {
                   ) : (
                     "Broadcast Transaction"
                   )}
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={handleExportSingle}
+                  disabled={!safeTx}
+                  title="Export this transaction as JSON"
+                  data-testid="tx-details-export-btn"
+                >
+                  Export Transaction
+                </button>
+                <button
+                  className="btn btn-secondary btn-outline btn-sm"
+                  onClick={handleShareLink}
+                  disabled={!safeTx}
+                  title="Copy shareable link with transaction and all signatures"
+                  data-testid="tx-details-share-link-btn"
+                >
+                  Share Link
+                </button>
+                <button
+                  className="btn btn-accent btn-outline btn-sm"
+                  onClick={handleShareSignature}
+                  disabled={!safeTx || !hasSigned}
+                  title="Copy shareable link with only your signature"
+                  data-testid="tx-details-share-signature-btn"
+                >
+                  Share Signature
                 </button>
               </div>
               {/* BroadcastModal for broadcast feedback */}

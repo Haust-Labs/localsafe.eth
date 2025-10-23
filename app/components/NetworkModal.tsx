@@ -3,11 +3,36 @@
 import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import { useChainManager } from "../hooks/useChainManager";
-import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
+import DefaultNetworkSvg from "../assets/svg/DefaultNetworkSvg";
 import NetworkForm from "./NetworkForm";
 import { NetworkFormState } from "../utils/types";
 import XSymbolSvg from "../assets/svg/XSymbolSvg";
 import PenEditSvg from "../assets/svg/PenEditSvg";
+
+// Component to render chain icon with fallback
+const ChainIcon = ({ chain }: { chain: any }) => {
+  const [imageError, setImageError] = useState(false);
+
+  // Use iconUrl if available (from RainbowKit or user-provided)
+  const iconUrl = chain.iconUrl;
+
+  if (!iconUrl || imageError) {
+    return (
+      <div className="h-6 w-6">
+        <DefaultNetworkSvg />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={iconUrl}
+      alt={`${chain.name} logo`}
+      className="h-6 w-6 rounded-full"
+      onError={() => setImageError(true)}
+    />
+  );
+};
 
 /**
  * A modal component to manage user config networks.
@@ -45,19 +70,33 @@ export default function NetworkModal({
    * @param state - The state of the network form to add or update.
    */
   function handleNetworkAdd(state: NetworkFormState) {
+    // Build contracts object with MultiSend addresses if provided
+    const contracts: Record<string, any> = {};
+    if (state.multiSendAddress) {
+      contracts.multiSend = {
+        address: state.multiSendAddress as `0x${string}`,
+      };
+    }
+    if (state.multiSendCallOnlyAddress) {
+      contracts.multiSendCallOnly = {
+        address: state.multiSendCallOnlyAddress as `0x${string}`,
+      };
+    }
+
     addOrUpdateChain({
       id: Number(state.id),
       name: state.name,
       rpcUrls: { default: { http: [state.rpcUrl] } },
       blockExplorers: state.blockExplorerUrl
         ? {
-            default: {
-              name: state.blockExplorerName || "Explorer",
-              url: state.blockExplorerUrl,
-            },
-          }
+          default: {
+            name: state.blockExplorerName || "Explorer",
+            url: state.blockExplorerUrl,
+          },
+        }
         : undefined,
       nativeCurrency: state.nativeCurrency,
+      contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
     });
     setEditChain(null);
   }
@@ -98,8 +137,8 @@ export default function NetworkModal({
                 return (
                   <li className="list-row" key={chain.id}>
                     <div>
-                      <div className="rounded-box bg-base-200 flex size-10 items-center justify-center">
-                        <NetworkChainSvg />
+                      <div className="rounded-box bg-base-200 flex size-10 items-center justify-center overflow-hidden">
+                        <ChainIcon chain={chain} />
                       </div>
                     </div>
                     <div>
@@ -122,6 +161,10 @@ export default function NetworkModal({
                               chain.blockExplorers?.default?.url || "",
                             blockExplorerName:
                               chain.blockExplorers?.default?.name || "",
+                            multiSendAddress:
+                              (chain.contracts as any)?.multiSend?.address || "",
+                            multiSendCallOnlyAddress:
+                              (chain.contracts as any)?.multiSendCallOnly?.address || "",
                             nativeCurrency: chain.nativeCurrency || {
                               name: "",
                               symbol: "",
