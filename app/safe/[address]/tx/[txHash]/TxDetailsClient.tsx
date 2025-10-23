@@ -824,10 +824,19 @@ export default function TxDetailsClient() {
             </>
           ) : (
             <div
-              className="text-gray-400"
+              className="alert alert-info"
               data-testid="tx-details-notfound-alert"
             >
-              Transaction not found.
+              {!connectedAddress ? (
+                <div className="flex flex-col gap-2">
+                  <span className="font-semibold">Connect Wallet to Get Started</span>
+                  <span className="text-sm">
+                    Please connect your wallet to view and sign this transaction.
+                  </span>
+                </div>
+              ) : (
+                "Transaction not found."
+              )}
             </div>
           )}
           {/* DaisyUI toast notification */}

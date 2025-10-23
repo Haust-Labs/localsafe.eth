@@ -35,7 +35,7 @@ export default function SafeDashboardClient({
   safeAddress: `0x${string}`;
 }) {
   // Try to get the name from addressBook for the current chain
-  const { chain } = useAccount();
+  const { chain, address: connectedAddress } = useAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -489,7 +489,16 @@ export default function SafeDashboardClient({
             {/* If no safeInfo, show a message */}
             {!safeInfo && !isLoading && !error && !unavailable && (
               <div className="alert alert-info">
-                No Safe information available.
+                {!connectedAddress ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="font-semibold">Connect Wallet to Get Started</span>
+                    <span className="text-sm">
+                      Please connect your wallet to view Safe information and sign transactions.
+                    </span>
+                  </div>
+                ) : (
+                  "No Safe information available."
+                )}
               </div>
             )}
           </div>
