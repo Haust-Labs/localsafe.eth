@@ -62,8 +62,6 @@ export default function SafeDashboardClient({
     useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
-  const [currentTx, setCurrentTx] = useState<EthSafeTransaction | null>(null);
-  const [currentTxHash, setCurrentTxHash] = useState<string | null>(null);
   const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -147,7 +145,7 @@ export default function SafeDashboardClient({
     }
 
     handleSharedLinks();
-  }, [kit, searchParams, safeAddress, importTx, getAllTransactions, saveTransaction]);
+  }, [kit, searchParams, safeAddress, importTx, getAllTransactions, saveTransaction, chain]);
 
   // Fetch all transactions if any
   useEffect(() => {
@@ -170,22 +168,15 @@ export default function SafeDashboardClient({
 
           if (!cancelled) {
             setAllTxs(txsWithHashes);
-            // Set first (lowest nonce) as current
-            setCurrentTx(txsWithHashes[0].tx);
-            setCurrentTxHash(txsWithHashes[0].hash);
           }
         } else {
           if (!cancelled) {
             setAllTxs([]);
-            setCurrentTx(null);
-            setCurrentTxHash(null);
           }
         }
       } catch {
         if (!cancelled) {
           setAllTxs([]);
-          setCurrentTx(null);
-          setCurrentTxHash(null);
         }
       }
     }
@@ -193,7 +184,7 @@ export default function SafeDashboardClient({
     return () => {
       cancelled = true;
     };
-  }, [getAllTransactions, kit, isLoading, safeAddress]);
+  }, [getAllTransactions, kit, isLoading, safeAddress, chain]);
 
   // Handler for deploying undeployed Safe
   async function handleDeployUndeployedSafe() {
@@ -261,14 +252,6 @@ export default function SafeDashboardClient({
         importTx(safeAddress, JSON.stringify(importPreview), chainId);
         setShowImportModal(false);
         setImportPreview(null);
-        // Optionally reload tx
-        const tx = await getSafeTransactionCurrent();
-        setCurrentTx(tx);
-        // Optionally update hash
-        if (kit && tx) {
-          const txHash = await kit.getTransactionHash(tx);
-          setCurrentTxHash(txHash || null);
-        }
       } catch {
         // Optionally show error toast
       }
@@ -311,13 +294,6 @@ export default function SafeDashboardClient({
       // Filter out the deleted transaction from the current list
       const updatedTxs = allTxs.filter(({ hash }) => hash !== txHash);
       setAllTxs(updatedTxs);
-      if (updatedTxs.length > 0) {
-        setCurrentTx(updatedTxs[0].tx);
-        setCurrentTxHash(updatedTxs[0].hash);
-      } else {
-        setCurrentTx(null);
-        setCurrentTxHash(null);
-      }
     }
   }
 

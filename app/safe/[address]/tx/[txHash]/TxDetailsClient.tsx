@@ -24,7 +24,6 @@ export default function TxDetailsClient() {
   const { address: safeAddress, txHash } = useParams<{ address: `0x${string}`; txHash: string }>();
   const router = useRouter();
   const {
-    getSafeTransactionCurrent,
     signSafeTransaction,
     broadcastSafeTransaction,
     isOwner,
@@ -32,7 +31,7 @@ export default function TxDetailsClient() {
     safeInfo,
     kit,
   } = useSafe(safeAddress);
-  const { removeTransaction, exportTx, getAllTransactions } = useSafeTxContext();
+  const { removeTransaction, getAllTransactions } = useSafeTxContext();
 
   // Refs and state
   const toastRef = useRef<HTMLDivElement | null>(null);
@@ -52,11 +51,6 @@ export default function TxDetailsClient() {
     domainHash: string;
     messageHash: string;
     eip712Hash: string;
-  } | null>(null);
-  const [decodedTransfer, setDecodedTransfer] = useState<{
-    type: "ERC20_TRANSFER";
-    recipient: string;
-    amount: string;
   } | null>(null);
 
   // Effects
@@ -535,7 +529,7 @@ export default function TxDetailsClient() {
                           </a>
                         )}
                         <a
-                          href={`https://tools.cyfrin.io/safe-hash?chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
+                          href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-xs btn-outline"

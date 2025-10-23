@@ -8,13 +8,14 @@ import NetworkForm from "./NetworkForm";
 import { NetworkFormState } from "../utils/types";
 import XSymbolSvg from "../assets/svg/XSymbolSvg";
 import PenEditSvg from "../assets/svg/PenEditSvg";
+import type { Chain } from "viem";
 
 // Component to render chain icon with fallback
-const ChainIcon = ({ chain }: { chain: any }) => {
+const ChainIcon = ({ chain }: { chain: Chain }) => {
   const [imageError, setImageError] = useState(false);
 
   // Use iconUrl if available (from RainbowKit or user-provided)
-  const iconUrl = chain.iconUrl;
+  const iconUrl = (chain as Chain & { iconUrl?: string }).iconUrl;
 
   if (!iconUrl || imageError) {
     return (
@@ -71,7 +72,7 @@ export default function NetworkModal({
    */
   function handleNetworkAdd(state: NetworkFormState) {
     // Build contracts object with MultiSend addresses if provided
-    const contracts: Record<string, any> = {};
+    const contracts: Record<string, { address: `0x${string}` }> = {};
     if (state.multiSendAddress) {
       contracts.multiSend = {
         address: state.multiSendAddress as `0x${string}`,
@@ -162,9 +163,9 @@ export default function NetworkModal({
                             blockExplorerName:
                               chain.blockExplorers?.default?.name || "",
                             multiSendAddress:
-                              (chain.contracts as any)?.multiSend?.address || "",
+                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSend?.address || "",
                             multiSendCallOnlyAddress:
-                              (chain.contracts as any)?.multiSendCallOnly?.address || "",
+                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSendCallOnly?.address || "",
                             nativeCurrency: chain.nativeCurrency || {
                               name: "",
                               symbol: "",

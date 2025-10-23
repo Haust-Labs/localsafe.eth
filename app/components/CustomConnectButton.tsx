@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
 import DefaultNetworkSvg from "../assets/svg/DefaultNetworkSvg";
 import { WAGMI_CONFIG_NETWORKS_KEY } from "../utils/constants";
+import type { NetworkFormState } from "../utils/types";
 
 interface CustomConnectButtonProps {
   onOpenNetworkModal: () => void;
@@ -71,9 +72,9 @@ export default function CustomConnectButton({
         const mergedNetworks = [...existingNetworks];
         let addedCount = 0;
 
-        importedNetworks.forEach((importedNet: any) => {
+        importedNetworks.forEach((importedNet: NetworkFormState) => {
           const exists = mergedNetworks.some(
-            (existingNet: any) => existingNet.id === importedNet.id
+            (existingNet: NetworkFormState) => existingNet.id === importedNet.id
           );
           if (!exists) {
             mergedNetworks.push(importedNet);

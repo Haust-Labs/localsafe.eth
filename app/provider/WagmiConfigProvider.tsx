@@ -108,18 +108,17 @@ export const WagmiConfigProvider: React.FC<{
   // Load chains from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
       setConfigChains(DEFAULT_CHAINS);
-      console.log(DEFAULT_CHAINS[5].iconUrl);
-      // if (stored) {
-      //   try {
-      //     setConfigChains(JSON.parse(stored));
-      //   } catch {
-      //     setConfigChains(DEFAULT_CHAINS);
-      //   }
-      // } else {
-      //   setConfigChains(DEFAULT_CHAINS);
-      // }
+      const stored = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
+      if (stored) {
+        try {
+          setConfigChains(JSON.parse(stored));
+        } catch {
+          setConfigChains(DEFAULT_CHAINS);
+        }
+      } else {
+        setConfigChains(DEFAULT_CHAINS);
+      }
       setChainsLoaded(true);
     }
   }, []);

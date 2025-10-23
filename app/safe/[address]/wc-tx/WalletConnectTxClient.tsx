@@ -7,12 +7,12 @@ import useSafe from "@/app/hooks/useSafe";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import DataPreview from "@/app/components/DataPreview";
-import { formatEther, parseEther } from "viem";
+import { formatEther } from "viem";
 
 export default function WalletConnectTxClient() {
   const router = useRouter();
   const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
-  const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
+  const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { buildSafeTransaction, kit, safeInfo } = useSafe(safeAddress);
 
   const [txParams, setTxParams] = useState<any>(null);
@@ -326,7 +326,7 @@ export default function WalletConnectTxClient() {
             <div className="flex flex-col">
               <span className="font-semibold">Safe Wallet Workflow</span>
               <span className="text-sm">
-                Clicking "Create Safe Transaction" will build a multi-sig transaction that requires signing and broadcasting.
+                Clicking &quot;Create Safe Transaction&quot; will build a multi-sig transaction that requires signing and broadcasting.
                 The dApp request will be rejected since Safe transactions cannot provide an immediate transaction hash.
               </span>
             </div>

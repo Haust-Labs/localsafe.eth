@@ -105,6 +105,7 @@ export default function TokenBalancesSection({
     async function fetchBalances() {
       setLoading(true);
       try {
+        if (!publicClient) return;
         const balancePromises = tokens.map(async (token) => {
           const balance = await publicClient.readContract({
             address: token.address as `0x${string}`,
@@ -233,7 +234,7 @@ export default function TokenBalancesSection({
       ]);
       setNewTokenAddress("");
       setShowAddToken(false);
-    } catch (err) {
+    } catch {
       setError("Failed to fetch token info. Make sure it's a valid ERC20 token.");
     }
   }

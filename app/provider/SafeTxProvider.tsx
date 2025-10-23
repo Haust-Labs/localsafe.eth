@@ -77,11 +77,6 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     // Create composite key: safeAddress-chainId
     const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
 
-    const txToSave = {
-      data: txObj.data,
-      signatures: txObj.signatures ? Array.from(txObj.signatures.values()) : [],
-    };
-
     // Get existing transactions or initialize empty array
     const existingTxs = currentTxMapRef.current[key] || [];
 

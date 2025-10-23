@@ -56,27 +56,27 @@ export default function WalletConnectSignClient() {
       switch (method) {
         case "personal_sign": {
           // personal_sign params: [message, address]
-          const [message, address] = signParams;
-          signature = await connector.signMessage({ message, account: safeAddress });
+          const [message] = signParams;
+          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
           break;
         }
 
         case "eth_sign": {
           // eth_sign params: [address, message]
-          const [address, message] = signParams;
-          signature = await connector.signMessage({ message, account: safeAddress });
+          const [, message] = signParams;
+          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
           break;
         }
 
         case "eth_signTypedData":
         case "eth_signTypedData_v4": {
           // signTypedData params: [address, typedData]
-          const [address, typedDataString] = signParams;
+          const [, typedDataString] = signParams;
           const typedData = typeof typedDataString === "string"
             ? JSON.parse(typedDataString)
             : typedDataString;
 
-          signature = await connector.signTypedData({
+          signature = await (connector as unknown as { signTypedData: (args: unknown) => Promise<string> }).signTypedData({
             account: safeAddress,
             ...typedData,
           });

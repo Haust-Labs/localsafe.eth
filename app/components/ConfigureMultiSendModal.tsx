@@ -150,7 +150,7 @@ export default function ConfigureMultiSendModal({
             </svg>
             <div className="text-sm">
               <p className="font-semibold">Warning</p>
-              <p>Only set these if you know what you're doing. Invalid addresses will prevent transaction batching.</p>
+              <p>Only set these if you know what you&apos;re doing. Invalid addresses will prevent transaction batching.</p>
             </div>
           </div>
         </div>

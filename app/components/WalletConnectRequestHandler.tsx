@@ -16,8 +16,6 @@ export default function WalletConnectRequestHandler() {
   const router = useRouter();
   const pathname = usePathname();
   const { address: safeAddress } = useParams<{ address?: `0x${string}` }>();
-  const { buildSafeTransaction } = useSafe(safeAddress || ("0x0" as `0x${string}`));
-  const { chain } = useAccount();
   const processedRequestIds = useRef(new Set<number>());
   const lastRequestId = useRef<number | null>(null);
   const isNavigatingToWcPage = useRef(false);
