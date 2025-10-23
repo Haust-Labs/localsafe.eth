@@ -391,14 +391,14 @@ export default function useSafe(safeAddress: `0x${string}`) {
 
         const safeTx = await kit.createTransaction(options);
         // txHash no longer needed
-        saveTransaction(safeAddress, safeTx);
+        saveTransaction(safeAddress, safeTx, chainId);
         return safeTx;
       } catch (err) {
         console.error("Error building SafeTransaction:", err);
         return null;
       }
     },
-    [saveTransaction, safeAddress],
+    [saveTransaction, safeAddress, chainId],
   );
 
   // Validate a SafeTransaction
@@ -455,7 +455,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
           });
         }
         const signedTx = await reconnectedKit.signTransaction(normalizedSafeTx);
-        saveTransaction(safeAddress, signedTx);
+        saveTransaction(safeAddress, signedTx, chainId);
         setHasSigned(true);
         return signedTx;
       } catch (err) {
@@ -463,7 +463,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
         return null;
       }
     },
-    [saveTransaction, safeAddress, signer, connector, connectSafe],
+    [saveTransaction, safeAddress, signer, connector, connectSafe, chainId],
   );
 
   // Broadcast a SafeTransaction

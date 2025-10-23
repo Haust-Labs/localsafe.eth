@@ -11,6 +11,7 @@ import BtnCancel from "@/app/components/BtnCancel";
 import { AbiFunctionItem } from "@/app/utils/types";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { useAccount } from "wagmi";
 
 /**
  * Helper to extract function names from ABI
@@ -85,6 +86,7 @@ export default function NewSafeTxClient() {
   // Hooks
   const { address: safeAddress } = useParams();
   const router = useRouter();
+  const { chain } = useAccount();
   const { buildSafeTransaction, getSafeTransactionHash, isOwner, safeInfo } = useSafe(
     safeAddress as `0x${string}`,
   );
@@ -117,7 +119,8 @@ export default function NewSafeTxClient() {
   >([]);
 
   // Calculate next available nonce
-  const queuedTransactions = getAllTransactions(safeAddress as `0x${string}`);
+  const chainId = chain?.id ? String(chain.id) : undefined;
+  const queuedTransactions = getAllTransactions(safeAddress as `0x${string}`, chainId);
   const nextAvailableNonce = React.useMemo(() => {
     if (!safeInfo) return 0;
 

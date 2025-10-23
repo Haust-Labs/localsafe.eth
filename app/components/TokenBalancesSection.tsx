@@ -72,6 +72,9 @@ export default function TokenBalancesSection({
   const [showAddToken, setShowAddToken] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null);
+  const [showJsonEditor, setShowJsonEditor] = useState(false);
+  const [jsonEditorValue, setJsonEditorValue] = useState("");
+  const [jsonEditorError, setJsonEditorError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const STORAGE_KEY = `token-balances-${safeAddress}-${chainId}`;
@@ -285,6 +288,36 @@ export default function TokenBalancesSection({
     e.target.value = "";
   }
 
+  // Open JSON editor
+  function handleOpenJsonEditor() {
+    setJsonEditorValue(JSON.stringify(tokens, null, 2));
+    setJsonEditorError(null);
+    setShowJsonEditor(true);
+  }
+
+  // Save JSON editor changes
+  function handleSaveJsonEditor() {
+    try {
+      const parsed = JSON.parse(jsonEditorValue);
+      if (!Array.isArray(parsed)) {
+        setJsonEditorError("JSON must be an array of token objects");
+        return;
+      }
+      // Validate each token has required fields
+      for (const token of parsed) {
+        if (!token.address || !token.symbol || typeof token.decimals !== "number") {
+          setJsonEditorError("Each token must have address, symbol, and decimals fields");
+          return;
+        }
+      }
+      setTokens(parsed);
+      setShowJsonEditor(false);
+      setJsonEditorError(null);
+    } catch (err) {
+      setJsonEditorError("Invalid JSON: " + (err instanceof Error ? err.message : String(err)));
+    }
+  }
+
   // Calculate total USD value
   const totalUsdValue = balances.reduce((sum, b) => sum + (b.usdValue || 0), 0);
 
@@ -330,6 +363,13 @@ export default function TokenBalancesSection({
               </button>
             </div>
           )}
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={handleOpenJsonEditor}
+            title="Edit token list as JSON"
+          >
+            Edit JSON
+          </button>
           <button
             className="btn btn-outline btn-sm"
             onClick={handleExport}
@@ -512,6 +552,73 @@ export default function TokenBalancesSection({
           tokenBalance={selectedToken.balance}
           safeAddress={safeAddress}
         />
+      )}
+
+      {/* JSON Editor Modal */}
+      {showJsonEditor && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-4xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg">Edit Token List (JSON)</h3>
+              <button
+                className="btn btn-ghost btn-sm btn-circle"
+                onClick={() => setShowJsonEditor(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="alert alert-info mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="stroke-current shrink-0 w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <div className="text-sm">
+                <p className="font-semibold">Token List Format</p>
+                <p>Each token must have: address (string), symbol (string), decimals (number), and optionally name (string)</p>
+              </div>
+            </div>
+
+            <textarea
+              className="textarea textarea-bordered w-full font-mono text-sm"
+              rows={20}
+              value={jsonEditorValue}
+              onChange={(e) => setJsonEditorValue(e.target.value)}
+              placeholder='[\n  {\n    "address": "0x...",\n    "symbol": "USDT",\n    "decimals": 6,\n    "name": "Tether USD"\n  }\n]'
+            />
+
+            {jsonEditorError && (
+              <div className="alert alert-error mt-2">
+                <span>{jsonEditorError}</span>
+              </div>
+            )}
+
+            <div className="modal-action">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowJsonEditor(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveJsonEditor}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setShowJsonEditor(false)}></div>
+        </div>
       )}
     </div>
   );

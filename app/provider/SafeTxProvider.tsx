@@ -8,12 +8,12 @@ import React, { createContext, useContext, useEffect, useRef } from "react";
 import { SAFE_TX_STORAGE_KEY } from "../utils/constants";
 
 export interface SafeTxContextType {
-  saveTransaction: (safeAddress: string, txObj: EthSafeTransaction) => void;
-  getTransaction: (safeAddress: string) => EthSafeTransaction | null;
-  getAllTransactions: (safeAddress: string) => EthSafeTransaction[];
-  removeTransaction: (safeAddress: string, txHash?: string) => void;
-  exportTx: (safeAddress: string) => string;
-  importTx: (safeAddress: string, json: string) => void;
+  saveTransaction: (safeAddress: string, txObj: EthSafeTransaction, chainId?: string) => void;
+  getTransaction: (safeAddress: string, chainId?: string) => EthSafeTransaction | null;
+  getAllTransactions: (safeAddress: string, chainId?: string) => EthSafeTransaction[];
+  removeTransaction: (safeAddress: string, txHash?: string, nonce?: number, chainId?: string) => void;
+  exportTx: (safeAddress: string, chainId?: string) => string;
+  importTx: (safeAddress: string, json: string, chainId?: string) => void;
 }
 
 const SafeTxContext = createContext<SafeTxContextType | undefined>(undefined);
@@ -72,15 +72,18 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  // Add or update a transaction for a specific safeAddress
-  function saveTransaction(safeAddress: string, txObj: EthSafeTransaction) {
+  // Add or update a transaction for a specific safeAddress and chainId
+  function saveTransaction(safeAddress: string, txObj: EthSafeTransaction, chainId?: string) {
+    // Create composite key: safeAddress-chainId
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
+
     const txToSave = {
       data: txObj.data,
       signatures: txObj.signatures ? Array.from(txObj.signatures.values()) : [],
     };
 
     // Get existing transactions or initialize empty array
-    const existingTxs = currentTxMapRef.current[safeAddress] || [];
+    const existingTxs = currentTxMapRef.current[key] || [];
 
     // Check if transaction with same nonce already exists
     const existingIndex = existingTxs.findIndex(
@@ -98,7 +101,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     // Sort by nonce
     existingTxs.sort((a, b) => Number(a.data.nonce) - Number(b.data.nonce));
 
-    currentTxMapRef.current[safeAddress] = existingTxs;
+    currentTxMapRef.current[key] = existingTxs;
 
     if (typeof window !== "undefined") {
       // Get full map, update, and save
@@ -107,7 +110,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
       if (rawMap) {
         map = JSON.parse(rawMap);
       }
-      map[safeAddress] = existingTxs.map((tx) => ({
+      map[key] = existingTxs.map((tx) => ({
         data: tx.data,
         signatures: tx.signatures ? Array.from(tx.signatures.values()) : [],
       }));
@@ -115,41 +118,46 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }
 
-  // Get the first transaction (lowest nonce) for a specific safeAddress
-  function getTransaction(safeAddress: string): EthSafeTransaction | null {
-    const txs = currentTxMapRef.current[safeAddress];
+  // Get the first transaction (lowest nonce) for a specific safeAddress and chainId
+  function getTransaction(safeAddress: string, chainId?: string): EthSafeTransaction | null {
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
+    const txs = currentTxMapRef.current[key];
     return (txs && txs.length > 0) ? txs[0] : null;
   }
 
-  // Get all transactions for a specific safeAddress, sorted by nonce
-  function getAllTransactions(safeAddress: string): EthSafeTransaction[] {
-    return currentTxMapRef.current[safeAddress] || [];
+  // Get all transactions for a specific safeAddress and chainId, sorted by nonce
+  function getAllTransactions(safeAddress: string, chainId?: string): EthSafeTransaction[] {
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
+    return currentTxMapRef.current[key] || [];
   }
 
-  // Remove a transaction for a specific safeAddress
-  // If txHash is provided, remove only that transaction. Otherwise, remove all.
-  function removeTransaction(safeAddress: string, txHash?: string) {
-    if (!txHash) {
+  // Remove a transaction for a specific safeAddress and chainId
+  // If txHash/nonce is provided, remove only that transaction. Otherwise, remove all.
+  function removeTransaction(safeAddress: string, txHash?: string, nonce?: number, chainId?: string) {
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
+
+    if (!txHash && nonce === undefined) {
       // Remove all transactions
-      currentTxMapRef.current[safeAddress] = [];
+      currentTxMapRef.current[key] = [];
       if (typeof window !== "undefined") {
         let map: Record<string, StoredTx[]> = {};
         const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
         if (rawMap) {
           map = JSON.parse(rawMap);
         }
-        delete map[safeAddress];
+        delete map[key];
         localStorage.setItem(SAFE_TX_STORAGE_KEY, JSON.stringify(map));
       }
     } else {
-      // Remove specific transaction by hash
-      const existingTxs = currentTxMapRef.current[safeAddress] || [];
-      const filtered = existingTxs.filter((tx) => {
-        // Compare transaction hashes (you'd need a hash function here)
-        // For now, compare by nonce as a simple approach
-        return JSON.stringify(tx.data) !== JSON.stringify(txHash);
-      });
-      currentTxMapRef.current[safeAddress] = filtered;
+      // Remove specific transaction by nonce (most reliable)
+      const existingTxs = currentTxMapRef.current[key] || [];
+
+      // Filter by nonce if provided, otherwise we can't reliably remove
+      const filtered = nonce !== undefined
+        ? existingTxs.filter((tx) => Number(tx.data.nonce) !== nonce)
+        : existingTxs;
+
+      currentTxMapRef.current[key] = filtered;
 
       if (typeof window !== "undefined") {
         let map: Record<string, StoredTx[]> = {};
@@ -158,21 +166,22 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
           map = JSON.parse(rawMap);
         }
         if (filtered.length > 0) {
-          map[safeAddress] = filtered.map((tx) => ({
+          map[key] = filtered.map((tx) => ({
             data: tx.data,
             signatures: tx.signatures ? Array.from(tx.signatures.values()) : [],
           }));
         } else {
-          delete map[safeAddress];
+          delete map[key];
         }
         localStorage.setItem(SAFE_TX_STORAGE_KEY, JSON.stringify(map));
       }
     }
   }
 
-  // Export all transactions for a specific safeAddress as JSON
-  function exportTx(safeAddress: string): string {
-    const txs = currentTxMapRef.current[safeAddress];
+  // Export all transactions for a specific safeAddress and chainId as JSON
+  function exportTx(safeAddress: string, chainId?: string): string {
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
+    const txs = currentTxMapRef.current[key];
     if (!txs || txs.length === 0) return "";
 
     const txsData = txs.map((tx) => ({
@@ -189,8 +198,9 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     return JSON.stringify({ transactions: txsData });
   }
 
-  // Import transaction(s) for a specific safeAddress from JSON
-  function importTx(safeAddress: string, json: string) {
+  // Import transaction(s) for a specific safeAddress and chainId from JSON
+  function importTx(safeAddress: string, json: string, chainId?: string) {
+    const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
     try {
       const obj = JSON.parse(json);
       const transactions: EthSafeTransaction[] = [];
@@ -246,14 +256,14 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
         // Sort by nonce
         transactions.sort((a, b) => Number(a.data.nonce) - Number(b.data.nonce));
 
-        currentTxMapRef.current[safeAddress] = transactions;
+        currentTxMapRef.current[key] = transactions;
         if (typeof window !== "undefined") {
           let map: Record<string, StoredTx[]> = {};
           const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
           if (rawMap) {
             map = JSON.parse(rawMap);
           }
-          map[safeAddress] = transactions.map((tx) => ({
+          map[key] = transactions.map((tx) => ({
             data: tx.data,
             signatures: tx.signatures ? Array.from(tx.signatures.values()) : [],
           }));

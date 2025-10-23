@@ -87,7 +87,8 @@ export default function SafeDashboardClient({
 
           if (parsed.tx && parsed.tx.data) {
             // Import the full transaction with signatures
-            importTx(safeAddress, JSON.stringify(parsed));
+            const chainId = chain?.id ? String(chain.id) : undefined;
+            importTx(safeAddress, JSON.stringify(parsed), chainId);
             // Clear URL parameter
             const newUrl = window.location.pathname;
             window.history.replaceState({}, "", newUrl);
@@ -105,7 +106,8 @@ export default function SafeDashboardClient({
 
           if (parsed.signature && parsed.txHash) {
             // Find the transaction by hash
-            const allTransactions = getAllTransactions(safeAddress);
+            const chainId = chain?.id ? String(chain.id) : undefined;
+            const allTransactions = getAllTransactions(safeAddress, chainId);
 
             // Search for transaction matching the hash
             let matchingTx: EthSafeTransaction | null = null;
@@ -154,7 +156,8 @@ export default function SafeDashboardClient({
     const safeKit = kit; // Capture kit in a const for TypeScript
     async function fetchTxs() {
       try {
-        const transactions = getAllTransactions(safeAddress);
+        const chainId = chain?.id ? String(chain.id) : undefined;
+        const transactions = getAllTransactions(safeAddress, chainId);
 
         if (transactions.length > 0) {
           // Get hashes for all transactions
@@ -254,7 +257,8 @@ export default function SafeDashboardClient({
       !("error" in importPreview)
     ) {
       try {
-        importTx(safeAddress, JSON.stringify(importPreview));
+        const chainId = chain?.id ? String(chain.id) : undefined;
+        importTx(safeAddress, JSON.stringify(importPreview), chainId);
         setShowImportModal(false);
         setImportPreview(null);
         // Optionally reload tx
@@ -300,9 +304,10 @@ export default function SafeDashboardClient({
   }
 
   // Handle transaction deletion
-  function handleDeleteTransaction(txHash: string) {
+  function handleDeleteTransaction(txHash: string, nonce: number) {
     if (confirm("Are you sure you want to delete this transaction?")) {
-      removeTransaction(safeAddress, txHash);
+      const chainId = chain?.id ? String(chain.id) : undefined;
+      removeTransaction(safeAddress, txHash, nonce, chainId);
       // Filter out the deleted transaction from the current list
       const updatedTxs = allTxs.filter(({ hash }) => hash !== txHash);
       setAllTxs(updatedTxs);
@@ -542,7 +547,7 @@ export default function SafeDashboardClient({
                   </Link>
                   <button
                     className="btn btn-ghost btn-sm btn-square"
-                    onClick={() => handleDeleteTransaction(hash)}
+                    onClick={() => handleDeleteTransaction(hash, Number(tx.data.nonce))}
                     title="Delete transaction"
                     data-testid={`safe-dashboard-delete-tx-btn-${hash}`}
                   >
@@ -556,7 +561,8 @@ export default function SafeDashboardClient({
               data-testid="safe-dashboard-export-tx-btn"
               onClick={() => {
                 try {
-                  const json = exportTx(safeAddress);
+                  const chainId = chain?.id ? String(chain.id) : undefined;
+                  const json = exportTx(safeAddress, chainId);
                   const blob = new Blob([json], { type: "application/json" });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
