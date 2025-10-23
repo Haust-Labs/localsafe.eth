@@ -5,13 +5,43 @@ import AppCard from "@/app/components/AppCard";
 import { useParams, useRouter } from "next/navigation";
 import useSafe from "@/app/hooks/useSafe";
 import { useEffect, useState, useRef } from "react";
-import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { EthSafeTransaction, EthSafeSignature } from "@safe-global/protocol-kit";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import DataPreview from "@/app/components/DataPreview";
 import BtnCancel from "@/app/components/BtnCancel";
 import { BroadcastModal } from "@/app/components/BroadcastModal";
 import { useAccount } from "wagmi";
 import { ethers } from "ethers";
+
+/**
+ * Maps chain IDs to chain names expected by Cyfrin tools
+ */
+function getChainNameForCyfrin(chainId: number): string {
+  const chainMap: Record<number, string> = {
+    1: "ethereum",
+    11155111: "sepolia",
+    42161: "arbitrum",
+    421614: "arbitrum-sepolia",
+    10: "optimism",
+    11155420: "optimism-sepolia",
+    8453: "base",
+    84532: "base-sepolia",
+    137: "polygon",
+    80001: "polygon-mumbai",
+    1101: "polygon-zkevm",
+    100: "gnosis",
+    56: "bsc",
+    43114: "avalanche",
+    5000: "mantle",
+    59144: "linea",
+    534352: "scroll",
+    42220: "celo",
+    324: "zksync",
+    7777777: "zora",
+    31337: "anvil",
+  };
+  return chainMap[chainId] || chainId.toString();
+}
 
 /**
  * TxDetailsClient component that displays the details of a specific transaction and allows signing and broadcasting.
@@ -31,7 +61,7 @@ export default function TxDetailsClient() {
     safeInfo,
     kit,
   } = useSafe(safeAddress);
-  const { removeTransaction, getAllTransactions } = useSafeTxContext();
+  const { removeTransaction, getAllTransactions, saveTransaction } = useSafeTxContext();
 
   // Refs and state
   const toastRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +77,9 @@ export default function TxDetailsClient() {
     message: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddSigModal, setShowAddSigModal] = useState(false);
+  const [signerAddress, setSignerAddress] = useState("");
+  const [signatureData, setSignatureData] = useState("");
   const [eip712Data, setEip712Data] = useState<{
     domainHash: string;
     messageHash: string;
@@ -139,7 +172,6 @@ export default function TxDetailsClient() {
         nonce: safeTx.data.nonce,
       };
 
-      // Calculate hashes
       const domainHash = ethers.TypedDataEncoder.hashDomain(domain);
       const messageHash = ethers.TypedDataEncoder.hashStruct("SafeTx", types, message);
       const eip712Hash = ethers.TypedDataEncoder.hash(domain, types, message);
@@ -324,6 +356,64 @@ export default function TxDetailsClient() {
     }
   }
 
+  /**
+   * Add a signature manually to the transaction
+   */
+  function handleAddSignature() {
+    if (!safeTx || !chain) return;
+    try {
+      // Validate inputs
+      if (!signerAddress || !signatureData) {
+        setToast({ type: "error", message: "Signer address and signature data are required" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      // Basic validation for address format
+      if (!signerAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        setToast({ type: "error", message: "Invalid signer address format" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      // Basic validation for signature format
+      if (!signatureData.match(/^0x[a-fA-F0-9]+$/)) {
+        setToast({ type: "error", message: "Invalid signature data format" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      // Create the signature object
+      const ethSignature = new EthSafeSignature(
+        signerAddress,
+        signatureData,
+        false // Assuming EOA signature, not contract signature
+      );
+
+      // Add signature to the transaction
+      safeTx.addSignature(ethSignature);
+
+      // Save the updated transaction
+      const chainId = String(chain.id);
+      saveTransaction(safeAddress, safeTx, chainId);
+
+      // Update local state
+      setSafeTx({ ...safeTx });
+
+      // Close modal and reset form
+      setShowAddSigModal(false);
+      setSignerAddress("");
+      setSignatureData("");
+
+      setToast({ type: "success", message: "Signature added successfully!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Add signature error:", e);
+      setToast({ type: "error", message: "Failed to add signature" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  }
+
   return (
     <AppSection testid="tx-details-section">
       <div className="mb-4">
@@ -501,7 +591,7 @@ export default function TxDetailsClient() {
                   <div className="flex items-center justify-between">
                     <div className="divider">EIP-712 Signature Data</div>
                     <a
-                      href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
+                      href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${getChainNameForCyfrin(chain.id)}&safeVersion=${safeInfo?.version || "1.4.1"}&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-xs btn-outline whitespace-nowrap"
@@ -634,6 +724,15 @@ export default function TxDetailsClient() {
                 >
                   Share Signature
                 </button>
+                <button
+                  className="btn btn-info btn-outline btn-sm"
+                  onClick={() => setShowAddSigModal(true)}
+                  disabled={!safeTx}
+                  title="Manually add a signature to this transaction"
+                  data-testid="tx-details-add-signature-btn"
+                >
+                  Add Signature
+                </button>
               </div>
               {/* BroadcastModal for broadcast feedback */}
               {showModal && (
@@ -651,6 +750,70 @@ export default function TxDetailsClient() {
                   successLabel="Back to Safe"
                   testid="tx-details-broadcast-modal"
                 />
+              )}
+
+              {/* Add Signature Modal */}
+              {showAddSigModal && (
+                <div className="modal modal-open">
+                  <div className="modal-box">
+                    <h3 className="font-bold text-lg mb-4">Add Signature Manually</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add a signature from another signer who signed this transaction offline or using a different tool.
+                    </p>
+
+                    <div className="form-control mb-4">
+                      <label className="label">
+                        <span className="label-text">Signer Address</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="0x..."
+                        className="input input-bordered w-full font-mono"
+                        value={signerAddress}
+                        onChange={(e) => setSignerAddress(e.target.value)}
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">The address that signed the transaction</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control mb-4">
+                      <label className="label">
+                        <span className="label-text">Signature Data</span>
+                      </label>
+                      <textarea
+                        placeholder="0x..."
+                        className="textarea textarea-bordered w-full font-mono text-xs"
+                        rows={4}
+                        value={signatureData}
+                        onChange={(e) => setSignatureData(e.target.value)}
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">The hex-encoded signature data</span>
+                      </label>
+                    </div>
+
+                    <div className="modal-action">
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          setShowAddSigModal(false);
+                          setSignerAddress("");
+                          setSignatureData("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleAddSignature}
+                        disabled={!signerAddress || !signatureData}
+                      >
+                        Add Signature
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           ) : (
