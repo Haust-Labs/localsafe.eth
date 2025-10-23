@@ -60,7 +60,7 @@ export default function Footer() {
             v{version}
           </span>
           <Link
-            href="https://github.com/Cyfrin/localsafe"
+            href="https://github.com/Cyfrin/localsafe.eth"
             target="_blank"
             rel="noopener noreferrer"
             className="text-base-content transition-opacity hover:opacity-70"

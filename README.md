@@ -264,6 +264,6 @@ To run your own local Safe contracts for development, follow these steps:
 
 Special thanks to all contributors!
 
-<a href="https://github.com/cyfrin/localsafe/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=cyfrin/localsafe" />
+<a href="https://github.com/cyfrin/localsafe.eth/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=cyfrin/localsafe.eth" />
 </a>
