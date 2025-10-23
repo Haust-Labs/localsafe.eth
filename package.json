@@ -27,6 +27,7 @@
     "@wagmi/core": "^2.20.1",
     "@walletconnect/core": "^2.22.4",
     "@walletconnect/types": "^2.22.4",
+    "ethers": "^6.15.0",
     "next": "15.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",

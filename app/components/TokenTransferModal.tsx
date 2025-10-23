@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Modal from "./Modal";
 import { useRouter } from "next/navigation";
 import { encodeFunctionData, parseUnits } from "viem";
 import useSafe from "@/app/hooks/useSafe";
+import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { useAccount } from "wagmi";
 
 interface TokenTransferModalProps {
   open: boolean;
@@ -39,12 +42,65 @@ export default function TokenTransferModal({
   safeAddress,
 }: TokenTransferModalProps) {
   const router = useRouter();
+  const { chain } = useAccount();
   const { buildSafeTransaction, getSafeTransactionHash, safeInfo } = useSafe(safeAddress as `0x${string}`);
+  const { getAllTransactions } = useSafeTxContext();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [customNonce, setCustomNonce] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [nonceWarning, setNonceWarning] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+
+  // Calculate next available nonce
+  const chainId = chain?.id ? String(chain.id) : undefined;
+  const queuedTransactions = getAllTransactions(safeAddress as `0x${string}`, chainId);
+  const nextAvailableNonce = useMemo(() => {
+    if (!safeInfo) return 0;
+
+    // Find highest nonce in queue
+    const queuedNonces = queuedTransactions.map((tx: EthSafeTransaction) => Number(tx.data.nonce));
+    const highestQueued = queuedNonces.length > 0 ? Math.max(...queuedNonces) : safeInfo.nonce - 1;
+
+    // Next available is highest queued + 1, or current Safe nonce if nothing queued
+    return Math.max(highestQueued + 1, safeInfo.nonce);
+  }, [safeInfo, queuedTransactions]);
+
+  // Set default nonce to next available
+  useEffect(() => {
+    if (nextAvailableNonce !== undefined) {
+      setCustomNonce(String(nextAvailableNonce));
+    }
+  }, [nextAvailableNonce]);
+
+  // Validate nonce whenever it changes
+  useEffect(() => {
+    if (!customNonce || !safeInfo) {
+      setNonceWarning(null);
+      return;
+    }
+
+    const nonce = parseInt(customNonce, 10);
+    if (isNaN(nonce)) {
+      setNonceWarning(null);
+      return;
+    }
+
+    // Check if nonce is already used on-chain
+    if (nonce < safeInfo.nonce) {
+      setNonceWarning(`⚠️ This nonce (${nonce}) has already been executed on-chain. Current on-chain nonce is ${safeInfo.nonce}.`);
+      return;
+    }
+
+    // Check if nonce is already in queue
+    const nonceInQueue = queuedTransactions.some((tx: EthSafeTransaction) => Number(tx.data.nonce) === nonce);
+    if (nonceInQueue) {
+      setNonceWarning(`⚠️ A transaction with nonce ${nonce} is already queued. Building this will overwrite it.`);
+      return;
+    }
+
+    setNonceWarning(null);
+  }, [customNonce, safeInfo, queuedTransactions]);
 
   async function handleTransfer() {
     setError(null);
@@ -189,16 +245,60 @@ export default function TokenTransferModal({
       {/* Nonce Input */}
       <div className="mb-4">
         <label className="label">
-          <span className="label-text">Custom Nonce (optional, current: {safeInfo?.nonce ?? "-"})</span>
+          <span className="label-text font-semibold">Transaction Nonce</span>
         </label>
+        <div className="alert alert-info mb-2 text-xs">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="stroke-current shrink-0 w-4 h-4"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <div>
+            <p className="font-semibold">Auto-selected: Next Available Nonce</p>
+            <p>Set to {nextAvailableNonce}. You can change it manually if needed.</p>
+          </div>
+        </div>
+        {nonceWarning && (
+          <div className="alert alert-warning mb-2 text-xs">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="stroke-current shrink-0 h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div>
+              {nonceWarning}
+            </div>
+          </div>
+        )}
         <input
           type="number"
-          className="input input-bordered input-sm w-full"
-          placeholder={`Leave empty for current nonce (${safeInfo?.nonce ?? ""})`}
+          className={`input input-bordered input-sm w-full ${nonceWarning ? "input-warning" : ""}`}
+          placeholder={`Next available: ${nextAvailableNonce}`}
           value={customNonce}
           onChange={(e) => setCustomNonce(e.target.value)}
           min="0"
         />
+        <label className="label">
+          <span className="label-text-alt">
+            On-chain nonce: {safeInfo?.nonce ?? "-"} | Queued transactions: {queuedTransactions.length}
+          </span>
+        </label>
       </div>
 
       {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
