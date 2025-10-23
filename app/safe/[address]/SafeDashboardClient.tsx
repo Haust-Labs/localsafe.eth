@@ -10,11 +10,11 @@ import {
 } from "@/app/utils/constants";
 import React, { useEffect, useState, useRef } from "react";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { ImportTxPreview, SafeDeployStep } from "@/app/utils/types";
-import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { EthSafeTransaction, EthSafeSignature } from "@safe-global/protocol-kit";
 import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
@@ -34,6 +34,7 @@ export default function SafeDashboardClient({
   // Try to get the name from addressBook for the current chain
   const { chain } = useAccount();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     safeName,
     safeInfo,
@@ -46,7 +47,7 @@ export default function SafeDashboardClient({
     getSafeTransactionCurrent,
   } = useSafe(safeAddress);
   // Hooks
-  const { exportTx, importTx, getAllTransactions } = useSafeTxContext();
+  const { exportTx, importTx, getAllTransactions, saveTransaction } = useSafeTxContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
@@ -64,10 +65,86 @@ export default function SafeDashboardClient({
   >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle shared transaction or signature links
+  useEffect(() => {
+    if (!kit) return;
+
+    async function handleSharedLinks() {
+      const importTxParam = searchParams.get("importTx");
+      const importSigParam = searchParams.get("importSig");
+
+      if (importTxParam) {
+        try {
+          const decoded = atob(decodeURIComponent(importTxParam));
+          const parsed = JSON.parse(decoded);
+
+          if (parsed.tx && parsed.tx.data) {
+            // Import the full transaction with signatures
+            importTx(safeAddress, JSON.stringify(parsed));
+            // Clear URL parameter
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, "", newUrl);
+            // Show success message
+            alert("Transaction imported successfully!");
+          }
+        } catch (e) {
+          console.error("Failed to import transaction from URL:", e);
+          alert("Failed to import transaction from shared link");
+        }
+      } else if (importSigParam) {
+        try {
+          const decoded = atob(decodeURIComponent(importSigParam));
+          const parsed = JSON.parse(decoded);
+
+          if (parsed.signature && parsed.txHash) {
+            // Find the transaction by hash
+            const allTransactions = getAllTransactions(safeAddress);
+
+            // Search for transaction matching the hash
+            let matchingTx: EthSafeTransaction | null = null;
+            for (const tx of allTransactions) {
+              if (!kit) break;
+              const hash = await kit.getTransactionHash(tx);
+              if (hash === parsed.txHash) {
+                matchingTx = tx;
+                break;
+              }
+            }
+
+            if (matchingTx) {
+              // Add the signature to the transaction
+              const ethSignature = new EthSafeSignature(
+                parsed.signature.signer,
+                parsed.signature.data,
+                parsed.signature.isContractSignature
+              );
+              matchingTx.addSignature(ethSignature);
+              saveTransaction(safeAddress, matchingTx);
+
+              // Clear URL parameter
+              const newUrl = window.location.pathname;
+              window.history.replaceState({}, "", newUrl);
+              // Show success message
+              alert("Signature added successfully!");
+            } else {
+              alert("Transaction not found. Please import the full transaction first.");
+            }
+          }
+        } catch (e) {
+          console.error("Failed to import signature from URL:", e);
+          alert("Failed to import signature from shared link");
+        }
+      }
+    }
+
+    handleSharedLinks();
+  }, [kit, searchParams, safeAddress, importTx, getAllTransactions, saveTransaction]);
+
   // Fetch all transactions if any
   useEffect(() => {
     if (!kit || isLoading) return; // Wait for kit to be ready
     let cancelled = false;
+    const safeKit = kit; // Capture kit in a const for TypeScript
     async function fetchTxs() {
       try {
         const transactions = getAllTransactions(safeAddress);
@@ -77,7 +154,7 @@ export default function SafeDashboardClient({
           const txsWithHashes = await Promise.all(
             transactions.map(async (tx) => ({
               tx,
-              hash: await kit.getTransactionHash(tx),
+              hash: await safeKit.getTransactionHash(tx),
             }))
           );
 

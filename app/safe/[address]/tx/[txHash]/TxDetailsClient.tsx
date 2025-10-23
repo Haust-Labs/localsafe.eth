@@ -19,8 +19,8 @@ import { useAccount } from "wagmi";
  */
 export default function TxDetailsClient() {
   // Hooks
-  const { chain } = useAccount();
-  const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
+  const { chain, address: connectedAddress } = useAccount();
+  const { address: safeAddress, txHash } = useParams<{ address: `0x${string}`; txHash: string }>();
   const router = useRouter();
   const {
     getSafeTransactionCurrent,
@@ -160,6 +160,84 @@ export default function TxDetailsClient() {
     } catch (e: unknown) {
       console.error("Export error:", e);
       setToast({ type: "error", message: "Export failed" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  }
+
+  /**
+   * Share transaction link with all signatures
+   */
+  function handleShareLink() {
+    if (!safeTx) return;
+    try {
+      const signatures = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).map((sig) => ({
+            signer: sig.signer,
+            data: sig.data,
+            isContractSignature: sig.isContractSignature,
+          }))
+        : [];
+
+      const txData = {
+        data: safeTx.data,
+        signatures,
+      };
+
+      const encoded = btoa(JSON.stringify({ tx: txData }));
+      const baseUrl = window.location.origin;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importTx=${encodeURIComponent(encoded)}`;
+
+      navigator.clipboard.writeText(shareUrl);
+      setToast({ type: "success", message: "Share link copied to clipboard!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Share link error:", e);
+      setToast({ type: "error", message: "Failed to create share link" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  }
+
+  /**
+   * Share signature link for this transaction
+   */
+  function handleShareSignature() {
+    if (!safeTx) return;
+    try {
+      if (!connectedAddress) {
+        setToast({ type: "error", message: "No wallet connected" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      // Find the signature for the current user
+      const userSignature = safeTx.signatures
+        ? Array.from(safeTx.signatures.values()).find(
+            (sig) => sig.signer.toLowerCase() === connectedAddress.toLowerCase()
+          )
+        : null;
+
+      if (!userSignature) {
+        setToast({ type: "error", message: "You haven't signed this transaction yet" });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+
+      const signatureData = {
+        signer: userSignature.signer,
+        data: userSignature.data,
+        isContractSignature: userSignature.isContractSignature,
+      };
+
+      const encoded = btoa(JSON.stringify({ signature: signatureData, txHash }));
+      const baseUrl = window.location.origin;
+      const shareUrl = `${baseUrl}/safe/${safeAddress}?importSig=${encodeURIComponent(encoded)}`;
+
+      navigator.clipboard.writeText(shareUrl);
+      setToast({ type: "success", message: "Signature link copied to clipboard!" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e: unknown) {
+      console.error("Share signature error:", e);
+      setToast({ type: "error", message: "Failed to create signature link" });
       setTimeout(() => setToast(null), 3000);
     }
   }
@@ -371,6 +449,24 @@ export default function TxDetailsClient() {
                   data-testid="tx-details-export-btn"
                 >
                   Export Transaction
+                </button>
+                <button
+                  className="btn btn-secondary btn-outline btn-sm"
+                  onClick={handleShareLink}
+                  disabled={!safeTx}
+                  title="Copy shareable link with transaction and all signatures"
+                  data-testid="tx-details-share-link-btn"
+                >
+                  Share Link
+                </button>
+                <button
+                  className="btn btn-accent btn-outline btn-sm"
+                  onClick={handleShareSignature}
+                  disabled={!safeTx || !hasSigned}
+                  title="Copy shareable link with only your signature"
+                  data-testid="tx-details-share-signature-btn"
+                >
+                  Share Signature
                 </button>
               </div>
               {/* BroadcastModal for broadcast feedback */}
