@@ -397,8 +397,14 @@ export default function TxDetailsClient() {
       const chainId = String(chain.id);
       saveTransaction(safeAddress, safeTx, chainId);
 
-      // Update local state
-      setSafeTx({ ...safeTx });
+      // Update local state - create fresh instance to trigger re-render
+      const updatedTx = new EthSafeTransaction(safeTx.data);
+      if (safeTx.signatures) {
+        safeTx.signatures.forEach((sig) => {
+          updatedTx.addSignature(sig);
+        });
+      }
+      setSafeTx(updatedTx);
 
       // Close modal and reset form
       setShowAddSigModal(false);
