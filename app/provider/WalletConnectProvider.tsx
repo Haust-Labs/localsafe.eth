@@ -17,7 +17,8 @@ export interface WalletConnectContextType {
   rejectSession: () => Promise<void>;
   disconnectSession: (topic: string) => Promise<void>;
   approveRequest: (topic: string, response: any) => Promise<void>;
-  rejectRequest: (topic: string, error: any) => Promise<void>;
+  rejectRequest: (topic: string, error: any, requestId?: number) => Promise<void>;
+  clearPendingRequest: () => void;
   error: Error | null;
   isInitialized: boolean;
   projectId: string | null;
@@ -95,8 +96,11 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           setError(null);
         });
 
-        wallet.on("session_request", (request: SignClientTypes.EventArguments["session_request"]) => {
-          console.log("Session request received:", request);
+        wallet.on("session_request", (request: any) => {
+          console.log("🔵 WalletConnect: session_request event fired!");
+          console.log("🔵 Full request object:", request);
+          console.log("🔵 Request ID:", request.id);
+          console.log("🔵 Request method:", request.params?.request?.method);
           setPendingRequest(request);
         });
 
@@ -217,14 +221,22 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("No pending request");
       }
       try {
+        console.log("🟢 Sending approval to WalletConnect:", {
+          topic,
+          response,
+          requestId: pendingRequest.id,
+        });
+
         await web3wallet.respondSessionRequest({
           topic,
           response,
         });
+
+        console.log("🟢 Approval sent successfully");
         setPendingRequest(null);
         setError(null);
       } catch (err) {
-        console.error("Failed to approve request:", err);
+        console.error("🟢 Failed to approve request:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         throw err;
       }
@@ -233,29 +245,53 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const rejectRequest = useCallback(
-    async (topic: string, error: any) => {
-      if (!web3wallet || !pendingRequest) {
-        throw new Error("No pending request");
+    async (topic: string, error: any, requestId?: number) => {
+      if (!web3wallet) {
+        throw new Error("Web3Wallet not initialized");
       }
+
+      // Use provided requestId or fall back to pendingRequest.id
+      const id = requestId ?? pendingRequest?.id;
+      if (!id) {
+        throw new Error("No request ID available");
+      }
+
       try {
+        const response = {
+          id,
+          jsonrpc: "2.0",
+          error,
+        };
+        console.log("🔴 Sending rejection to WalletConnect:", {
+          topic,
+          response,
+          requestId: id,
+        });
+
         await web3wallet.respondSessionRequest({
           topic,
-          response: {
-            id: pendingRequest.id,
-            jsonrpc: "2.0",
-            error,
-          },
+          response,
         });
+
+        console.log("🔴 Rejection sent successfully");
         setPendingRequest(null);
         setError(null);
       } catch (err) {
-        console.error("Failed to reject request:", err);
+        console.error("🔴 Failed to reject request:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
         throw err;
       }
     },
     [web3wallet, pendingRequest]
   );
+
+  const clearPendingRequest = useCallback(() => {
+    console.log("🟣 Manually clearing pending request");
+    setPendingRequest(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("wc-pending-request");
+    }
+  }, []);
 
   return (
     <WalletConnectContext.Provider
@@ -270,6 +306,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         disconnectSession,
         approveRequest,
         rejectRequest,
+        clearPendingRequest,
         error,
         isInitialized,
         projectId,

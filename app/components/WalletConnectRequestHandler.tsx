@@ -2,28 +2,47 @@
 
 import { useEffect, useRef } from "react";
 import { useWalletConnect } from "../provider/WalletConnectProvider";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import useSafe from "../hooks/useSafe";
 import { useAccount } from "wagmi";
 
 /**
  * WalletConnectRequestHandler component that monitors for WalletConnect transaction requests
  * and redirects to the transaction builder when a request is received.
+ * Also auto-rejects requests when navigating away from WalletConnect pages.
  */
 export default function WalletConnectRequestHandler() {
-  const { pendingRequest, approveRequest, rejectRequest } = useWalletConnect();
+  const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const router = useRouter();
+  const pathname = usePathname();
   const { address: safeAddress } = useParams<{ address?: `0x${string}` }>();
   const { buildSafeTransaction } = useSafe(safeAddress || ("0x0" as `0x${string}`));
   const { chain } = useAccount();
   const processedRequestIds = useRef(new Set<number>());
+  const lastRequestId = useRef<number | null>(null);
+  const isNavigatingToWcPage = useRef(false);
 
+  // Handle incoming requests and route to appropriate pages
   useEffect(() => {
-    if (!pendingRequest) return;
-    if (processedRequestIds.current.has(pendingRequest.id)) return;
+    if (!pendingRequest) {
+      console.log("WalletConnectRequestHandler: No pending request");
+      return;
+    }
 
-    const { topic, params } = pendingRequest;
+    console.log("WalletConnectRequestHandler: Pending request detected:", pendingRequest);
+
+    if (processedRequestIds.current.has(pendingRequest.id)) {
+      console.log("WalletConnectRequestHandler: Request already processed");
+      return;
+    }
+
+    const { params } = pendingRequest;
     const { request } = params;
+
+    console.log("WalletConnectRequestHandler: Request method:", request.method);
+
+    // Store the last request ID for cleanup tracking
+    lastRequestId.current = pendingRequest.id;
 
     // Handle eth_sendTransaction
     if (request.method === "eth_sendTransaction") {
@@ -34,13 +53,16 @@ export default function WalletConnectRequestHandler() {
         return;
       }
 
-      const [txParams] = request.params as any[];
+      console.log("WalletConnectRequestHandler: Navigating to wc-tx page");
 
       // Navigate to a WalletConnect transaction handling page
       // We'll store the request in sessionStorage so the transaction page can access it
       if (typeof window !== "undefined") {
         sessionStorage.setItem("wc-pending-request", JSON.stringify(pendingRequest));
       }
+
+      // Set flag to prevent auto-reject during navigation
+      isNavigatingToWcPage.current = true;
 
       // Navigate to the Safe's WalletConnect transaction page
       router.push(`/safe/${safeAddress}/wc-tx`);
@@ -65,10 +87,56 @@ export default function WalletConnectRequestHandler() {
         sessionStorage.setItem("wc-pending-request", JSON.stringify(pendingRequest));
       }
 
+      // Set flag to prevent auto-reject during navigation
+      isNavigatingToWcPage.current = true;
+
       // Navigate to the Safe's WalletConnect signing page
       router.push(`/safe/${safeAddress}/wc-sign`);
     }
   }, [pendingRequest, router, safeAddress]);
+
+  // Auto-reject requests when navigating away from WalletConnect pages
+  useEffect(() => {
+    // Check if we have a pending request and we're NOT on a WalletConnect page
+    if (pendingRequest && pathname) {
+      const isOnWcPage = pathname.includes("/wc-tx") || pathname.includes("/wc-sign");
+
+      // If we're on a WC page, clear the navigation flag
+      if (isOnWcPage) {
+        isNavigatingToWcPage.current = false;
+      }
+
+      // Only auto-reject if:
+      // 1. We're not on a WC page
+      // 2. We're not in the process of navigating to a WC page
+      if (!isOnWcPage && !isNavigatingToWcPage.current) {
+        console.log("🟠 Auto-rejecting request - navigated away from WalletConnect page");
+        console.log("🟠 Current path:", pathname);
+        console.log("🟠 Request ID:", pendingRequest.id);
+
+        // Auto-reject the request
+        const autoReject = async () => {
+          try {
+            await rejectRequest(
+              pendingRequest.topic,
+              {
+                code: 4001,
+                message: "User navigated away from request page",
+              },
+              pendingRequest.id // Pass the request ID
+            );
+            console.log("🟠 Auto-rejection sent successfully");
+          } catch (error) {
+            console.error("🟠 Failed to auto-reject request:", error);
+            // Clear anyway as a fallback
+            clearPendingRequest();
+          }
+        };
+
+        autoReject();
+      }
+    }
+  }, [pendingRequest, pathname, rejectRequest, clearPendingRequest]);
 
   return null; // This component doesn't render anything
 }

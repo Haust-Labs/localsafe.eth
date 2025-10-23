@@ -68,13 +68,15 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
 
     try {
       const proposal = pendingProposal as any;
-      console.log("Full proposal:", proposal);
+      console.log("🟢 Full proposal:", proposal);
 
       const requiredNamespaces = proposal.requiredNamespaces || {};
       const optionalNamespaces = proposal.optionalNamespaces || {};
 
-      console.log("Required namespaces:", requiredNamespaces);
-      console.log("Optional namespaces:", optionalNamespaces);
+      console.log("🟢 Required namespaces:", requiredNamespaces);
+      console.log("🟢 Optional namespaces:", optionalNamespaces);
+      console.log("🟢 Safe address being used:", safeAddress);
+      console.log("🟢 Chain ID:", chain?.id);
 
       const namespaces: Record<string, any> = {};
 
@@ -84,8 +86,10 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
         const methods = value.methods || [];
         const events = value.events || [];
 
-        // Build accounts array
+        // Build accounts array - ensure proper format
         const accounts = chains.map((chainId: string) => `${chainId}:${safeAddress}`);
+
+        console.log(`🟢 Namespace ${key} accounts:`, accounts);
 
         namespaces[key] = {
           accounts,
