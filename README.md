@@ -238,12 +238,8 @@ To run your own local Safe contracts for development, follow these steps:
 
 ## TODO
 
-- [x] Let user create their network configuration (RPC URL, chainId, etc.) in UI and store in localStorage.
-- [ ] Let user remove current transaction from Safe dashboard.
 - [ ] Improve devcontainer setup for E2E tests; currently, UI mode has limitations.
 - [ ] Ensure smooth DX when switching between local and devcontainer environments and wild processes cleaning (next-server, anvil).
-- [ ] Add support for more chains other than testnets if everything works well.
-- [ ] Add support to connect Safe wallet to other dApps with WalletConnect.
 - [ ] Adapted for SafeWallet@1.4.1-3 contracts; need to adapt to any versions.
 - [ ] Automate `version` value in `DEFAULT_SAFE_WALLET_DATA` constant (`app/utils/constants.ts` hardcoded to `3.0.0` now).
 - [ ] Ensure responsiveness of UI on every screen size.

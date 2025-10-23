@@ -387,15 +387,29 @@ export default function TxDetailsClient() {
                   </span>
                 </div>
                 <div
-                  className="flex items-center justify-between px-4 py-3 text-right"
+                  className="flex items-start justify-between px-4 py-3"
                   data-testid="tx-details-data-row"
                 >
                   <span className="font-semibold">Data</span>
-                  {safeTx.data.data && safeTx.data.data !== "0x" ? (
-                    <DataPreview value={safeTx.data.data} />
-                  ) : (
-                    <span className="text-gray-400">No calldata (0x)</span>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {safeTx.data.data && safeTx.data.data !== "0x" ? (
+                      <>
+                        <DataPreview value={safeTx.data.data} />
+                        {chain && (
+                          <a
+                            href={`https://tools.cyfrin.io/abi-encoding?data=${safeTx.data.data}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-xs btn-outline"
+                          >
+                            🔍 Decode Calldata
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">No calldata (0x)</span>
+                    )}
+                  </div>
                 </div>
                 <div
                   className="flex items-center justify-between px-4 py-3"
@@ -479,7 +493,17 @@ export default function TxDetailsClient() {
               {/* EIP-712 Data Section */}
               {eip712Data && safeTx && chain && (
                 <div className="mt-4 space-y-4">
-                  <div className="divider">EIP-712 Signature Data</div>
+                  <div className="flex items-center justify-between">
+                    <div className="divider">EIP-712 Signature Data</div>
+                    <a
+                      href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-xs btn-outline whitespace-nowrap"
+                    >
+                      🔐 Verify EIP-712 Hash
+                    </a>
+                  </div>
 
                   <div className="bg-base-200 rounded-box p-4 space-y-3">
                     <div>
@@ -497,46 +521,6 @@ export default function TxDetailsClient() {
                       <p className="font-mono text-xs text-blue-800 dark:text-blue-200 break-all">
                         {eip712Data.eip712Hash}
                       </p>
-                    </div>
-                  </div>
-
-                  {/* Cyfrin Tools Links */}
-                  <div className="alert alert-success">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      className="stroke-current shrink-0 w-6 h-6"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      ></path>
-                    </svg>
-                    <div className="text-sm flex-1">
-                      <p className="font-semibold mb-2">Cyfrin Tools</p>
-                      <div className="flex flex-wrap gap-2">
-                        {safeTx.data.data && safeTx.data.data !== "0x" && (
-                          <a
-                            href={`https://tools.cyfrin.io/abi-encoding?data=${safeTx.data.data}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-xs btn-outline"
-                          >
-                            🔍 Decode Calldata
-                          </a>
-                        )}
-                        <a
-                          href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${chain.id}&safeVersion=1.4.1&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-xs btn-outline"
-                        >
-                          🔐 Verify EIP-712 Hash
-                        </a>
-                      </div>
                     </div>
                   </div>
                 </div>

@@ -248,17 +248,35 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (transactions.length > 0) {
-        // Sort by nonce
-        transactions.sort((a, b) => Number(a.data.nonce) - Number(b.data.nonce));
+        // Merge with existing transactions instead of replacing
+        const existingTxs = currentTxMapRef.current[key] || [];
+        const mergedTxs = [...existingTxs];
 
-        currentTxMapRef.current[key] = transactions;
+        // For each imported transaction, add or replace by nonce
+        transactions.forEach((importedTx) => {
+          const existingIndex = mergedTxs.findIndex(
+            (tx) => Number(tx.data.nonce) === Number(importedTx.data.nonce)
+          );
+          if (existingIndex >= 0) {
+            // Replace existing transaction with same nonce
+            mergedTxs[existingIndex] = importedTx;
+          } else {
+            // Add new transaction
+            mergedTxs.push(importedTx);
+          }
+        });
+
+        // Sort by nonce
+        mergedTxs.sort((a, b) => Number(a.data.nonce) - Number(b.data.nonce));
+
+        currentTxMapRef.current[key] = mergedTxs;
         if (typeof window !== "undefined") {
           let map: Record<string, StoredTx[]> = {};
           const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
           if (rawMap) {
             map = JSON.parse(rawMap);
           }
-          map[key] = transactions.map((tx) => ({
+          map[key] = mergedTxs.map((tx) => ({
             data: tx.data,
             signatures: tx.signatures ? Array.from(tx.signatures.values()) : [],
           }));

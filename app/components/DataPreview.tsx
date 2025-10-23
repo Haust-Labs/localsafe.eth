@@ -15,13 +15,13 @@ export default function DataPreview({ value }: { value: string }) {
   // Show full value
   if (showAll || value.length <= PREVIEW_LEN) {
     return (
-      <div className="w-7/12">
-        <span className="break-words whitespace-pre-wrap">
+      <div className="max-w-full overflow-hidden">
+        <p className="break-all overflow-wrap-anywhere font-mono text-xs">
           <b aria-label="The first 4 bytes determine the contract method that is being called">
             {value.slice(0, METHOD_SELECTOR_LEN)}
           </b>
           {value.slice(METHOD_SELECTOR_LEN)}
-        </span>
+        </p>
         {value.length > PREVIEW_LEN && (
           <button
             className="btn btn-xs btn-link"
@@ -36,14 +36,14 @@ export default function DataPreview({ value }: { value: string }) {
   }
   // Truncated preview
   return (
-    <div className="w-7/12">
-      <span className="break-words whitespace-pre-wrap">
+    <div className="max-w-full overflow-hidden">
+      <p className="break-all overflow-wrap-anywhere font-mono text-xs">
         <b aria-label="The first 4 bytes determine the contract method that is being called">
           {value.slice(0, METHOD_SELECTOR_LEN)}
         </b>
         {value.slice(METHOD_SELECTOR_LEN, PREVIEW_LEN)}
         <span className="text-gray-400">…</span>
-      </span>
+      </p>
       <button
         className="btn btn-xs btn-link"
         type="button"
