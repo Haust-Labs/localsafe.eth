@@ -36,6 +36,16 @@ export interface SafeWalletContextType {
     safeAddress: string,
     deployed?: boolean,
   ) => void;
+  setSafeMultiSendConfig: (
+    chainId: string,
+    safeAddress: string,
+    multiSendAddress?: string,
+    multiSendCallOnlyAddress?: string,
+  ) => void;
+  getSafeMultiSendConfig: (
+    chainId: string,
+    safeAddress: string,
+  ) => { multiSendAddress?: string; multiSendCallOnlyAddress?: string } | undefined;
 }
 
 export const SafeWalletContext = createContext<
@@ -131,6 +141,39 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  const setSafeMultiSendConfig = (
+    chainId: string,
+    safeAddress: string,
+    multiSendAddress?: string,
+    multiSendCallOnlyAddress?: string,
+  ) => {
+    setSafeWalletData((prev) => {
+      const data = { ...prev.data };
+      if (!data.safeConfig) data.safeConfig = {};
+      if (!data.safeConfig[chainId]) data.safeConfig[chainId] = {};
+
+      // If both are empty/undefined, remove the config entry
+      if (!multiSendAddress && !multiSendCallOnlyAddress) {
+        delete data.safeConfig[chainId][safeAddress];
+        // Clean up empty chain object
+        if (Object.keys(data.safeConfig[chainId]).length === 0) {
+          delete data.safeConfig[chainId];
+        }
+      } else {
+        data.safeConfig[chainId][safeAddress] = {
+          multiSendAddress,
+          multiSendCallOnlyAddress,
+        };
+      }
+
+      return { ...prev, data };
+    });
+  };
+
+  const getSafeMultiSendConfig = (chainId: string, safeAddress: string) => {
+    return safeWalletData?.data?.safeConfig?.[chainId]?.[safeAddress];
+  };
+
   return (
     <SafeWalletContext.Provider
       value={{
@@ -139,6 +182,8 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
         contractNetworks,
         addSafe,
         removeSafe,
+        setSafeMultiSendConfig,
+        getSafeMultiSendConfig,
       }}
     >
       {children}

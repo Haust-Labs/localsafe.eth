@@ -19,6 +19,9 @@ import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
 import TokenBalancesSection from "@/app/components/TokenBalancesSection";
+import ManageOwnersModal from "@/app/components/ManageOwnersModal";
+import ConfigureMultiSendModal from "@/app/components/ConfigureMultiSendModal";
+import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 
 /**
  * SafeDashboardClient component that displays the dashboard for a specific safe, including its details and actions.
@@ -45,12 +48,16 @@ export default function SafeDashboardClient({
     kit,
     deployUndeployedSafe,
     getSafeTransactionCurrent,
+    createBatchedOwnerManagementTransaction,
   } = useSafe(safeAddress);
   // Hooks
-  const { exportTx, importTx, getAllTransactions, saveTransaction } = useSafeTxContext();
+  const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction} = useSafeTxContext();
+  const { setSafeMultiSendConfig, getSafeMultiSendConfig } = useSafeWalletContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
+  const [manageOwnersModalOpen, setManageOwnersModalOpen] = useState(false);
+  const [multiSendModalOpen, setMultiSendModalOpen] = useState(false);
   const [deploySteps, setDeploySteps] =
     useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
@@ -264,6 +271,51 @@ export default function SafeDashboardClient({
     }
   }
 
+  // Handle owner management batch update
+  async function handleOwnerManagementBatch(
+    changes: Array<{ type: "add" | "remove"; address: string }>,
+    newThreshold: number,
+  ) {
+    // Cast addresses to Address type for the hook
+    const typedChanges = changes.map(c => ({
+      type: c.type,
+      address: c.address as `0x${string}`,
+    }));
+    const txHash = await createBatchedOwnerManagementTransaction(typedChanges, newThreshold);
+    if (txHash) {
+      router.push(`/safe/${safeAddress}/tx/${txHash}`);
+    }
+  }
+
+  // Get current MultiSend config for this Safe
+  const currentMultiSendConfig = chain?.id
+    ? getSafeMultiSendConfig(String(chain.id), safeAddress)
+    : undefined;
+
+  // Handle MultiSend config save
+  function handleSaveMultiSendConfig(multiSend?: string, multiSendCallOnly?: string) {
+    if (chain?.id) {
+      setSafeMultiSendConfig(String(chain.id), safeAddress, multiSend, multiSendCallOnly);
+    }
+  }
+
+  // Handle transaction deletion
+  function handleDeleteTransaction(txHash: string) {
+    if (confirm("Are you sure you want to delete this transaction?")) {
+      removeTransaction(safeAddress, txHash);
+      // Filter out the deleted transaction from the current list
+      const updatedTxs = allTxs.filter(({ hash }) => hash !== txHash);
+      setAllTxs(updatedTxs);
+      if (updatedTxs.length > 0) {
+        setCurrentTx(updatedTxs[0].tx);
+        setCurrentTxHash(updatedTxs[0].hash);
+      } else {
+        setCurrentTx(null);
+        setCurrentTxHash(null);
+      }
+    }
+  }
+
   return (
     <AppSection>
       {/* Stat row for key Safe data */}
@@ -321,6 +373,23 @@ export default function SafeDashboardClient({
             <span className="font-semibold">Version:</span>
             <span className="ml-2">{safeInfo?.version ?? "-"}</span>
           </div>
+          {/* Manage Owners Button */}
+          {safeInfo && safeInfo.deployed && isOwner && !unavailable && (
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                className="btn btn-outline btn-sm w-full"
+                onClick={() => setManageOwnersModalOpen(true)}
+              >
+                Manage Owners & Threshold
+              </button>
+              <button
+                className="btn btn-outline btn-sm w-full"
+                onClick={() => setMultiSendModalOpen(true)}
+              >
+                Configure MultiSend
+              </button>
+            </div>
+          )}
         </AppCard>
         {/* Actions in top right cell */}
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
@@ -449,28 +518,37 @@ export default function SafeDashboardClient({
           >
             <div className="flex flex-col gap-2">
               {allTxs.map(({ tx, hash }) => (
-                <Link
-                  key={hash}
-                  className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
-                  data-testid={`safe-dashboard-current-tx-link-${hash}`}
-                  href={`/safe/${safeAddress}/tx/${hash}`}
-                  title="View transaction details"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Nonce:</span>
-                    <span className="font-mono">{tx.data.nonce}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Hash:</span>
-                    <span className="max-w-[120px] truncate font-mono text-xs" title={hash}>
-                      {hash}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Sigs:</span>
-                    <span>{tx.signatures?.size ?? 0}</span>
-                  </div>
-                </Link>
+                <div key={hash} className="flex gap-2 items-center">
+                  <Link
+                    className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
+                    data-testid={`safe-dashboard-current-tx-link-${hash}`}
+                    href={`/safe/${safeAddress}/tx/${hash}`}
+                    title="View transaction details"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Nonce:</span>
+                      <span className="font-mono">{tx.data.nonce}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Hash:</span>
+                      <span className="max-w-[120px] truncate font-mono text-xs" title={hash}>
+                        {hash}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Sigs:</span>
+                      <span>{tx.signatures?.size ?? 0}</span>
+                    </div>
+                  </Link>
+                  <button
+                    className="btn btn-ghost btn-sm btn-square"
+                    onClick={() => handleDeleteTransaction(hash)}
+                    title="Delete transaction"
+                    data-testid={`safe-dashboard-delete-tx-btn-${hash}`}
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
             </div>
             <button
@@ -534,6 +612,24 @@ export default function SafeDashboardClient({
         }}
         importPreview={importPreview}
         onReplace={async () => handleImportTx(importPreview)}
+      />
+      {/* Manage Owners Modal */}
+      {safeInfo && (
+        <ManageOwnersModal
+          open={manageOwnersModalOpen}
+          onClose={() => setManageOwnersModalOpen(false)}
+          owners={safeInfo.owners}
+          threshold={safeInfo.threshold}
+          onBatchUpdate={handleOwnerManagementBatch}
+        />
+      )}
+      {/* Configure MultiSend Modal */}
+      <ConfigureMultiSendModal
+        open={multiSendModalOpen}
+        onClose={() => setMultiSendModalOpen(false)}
+        currentMultiSend={currentMultiSendConfig?.multiSendAddress}
+        currentMultiSendCallOnly={currentMultiSendConfig?.multiSendCallOnlyAddress}
+        onSave={handleSaveMultiSendConfig}
       />
     </AppSection>
   );

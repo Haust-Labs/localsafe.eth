@@ -6,7 +6,7 @@ import {
   createPredictionConfig,
   getMinimalEIP1193Provider,
 } from "../utils/helpers";
-import { getAddress } from "viem";
+import { getAddress, encodeFunctionData, Address } from "viem";
 
 // Cache for protocolKit instances (per chainId+safeAddress)
 import { useSafeTxContext } from "../provider/SafeTxProvider";
@@ -17,6 +17,38 @@ import Safe, {
 import { MinimalEIP1193Provider, SafeDeployStep } from "../utils/types";
 import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
 import { waitForTransactionReceipt } from "viem/actions";
+
+// Safe contract ABI for owner management functions
+const SAFE_ABI = [
+  {
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "_threshold", type: "uint256" },
+    ],
+    name: "addOwnerWithThreshold",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "prevOwner", type: "address" },
+      { name: "owner", type: "address" },
+      { name: "_threshold", type: "uint256" },
+    ],
+    name: "removeOwner",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_threshold", type: "uint256" }],
+    name: "changeThreshold",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 /**
  * Custom hook to manage and interact with a specific Safe wallet.
@@ -462,6 +494,245 @@ export default function useSafe(safeAddress: `0x${string}`) {
       return safeTx;
     }, [getTransaction, signer, safeAddress]);
 
+  // Create transaction to add a new owner
+  const createAddOwnerTransaction = useCallback(
+    async (newOwner: Address, newThreshold: number): Promise<string | null> => {
+      if (!safeInfo) return null;
+
+      try {
+        // Encode the addOwnerWithThreshold function call
+        const data = encodeFunctionData({
+          abi: SAFE_ABI,
+          functionName: "addOwnerWithThreshold",
+          args: [newOwner, BigInt(newThreshold)],
+        });
+
+        // Build the Safe transaction
+        const safeTx = await buildSafeTransaction([
+          {
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0, // Call operation
+          },
+        ]);
+
+        if (!safeTx) {
+          throw new Error("Failed to build transaction");
+        }
+
+        // Get the transaction hash
+        const txHash = await getSafeTransactionHash(safeTx);
+        return txHash;
+      } catch (err) {
+        console.error("Error creating add owner transaction:", err);
+        throw err;
+      }
+    },
+    [safeInfo, safeAddress, buildSafeTransaction, getSafeTransactionHash],
+  );
+
+  // Create transaction to remove an owner
+  const createRemoveOwnerTransaction = useCallback(
+    async (ownerToRemove: Address, newThreshold: number): Promise<string | null> => {
+      if (!safeInfo) return null;
+
+      try {
+        const owners = safeInfo.owners;
+        const ownerIndex = owners.findIndex(
+          (o) => o.toLowerCase() === ownerToRemove.toLowerCase()
+        );
+
+        if (ownerIndex === -1) {
+          throw new Error("Owner not found");
+        }
+
+        // Get the previous owner in the linked list
+        // If removing the first owner, prevOwner is the sentinel address
+        const prevOwner = ownerIndex === 0
+          ? "0x0000000000000000000000000000000000000001" as Address
+          : owners[ownerIndex - 1];
+
+        // Encode the removeOwner function call
+        const data = encodeFunctionData({
+          abi: SAFE_ABI,
+          functionName: "removeOwner",
+          args: [prevOwner, ownerToRemove, BigInt(newThreshold)],
+        });
+
+        // Build the Safe transaction
+        const safeTx = await buildSafeTransaction([
+          {
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0, // Call operation
+          },
+        ]);
+
+        if (!safeTx) {
+          throw new Error("Failed to build transaction");
+        }
+
+        // Get the transaction hash
+        const txHash = await getSafeTransactionHash(safeTx);
+        return txHash;
+      } catch (err) {
+        console.error("Error creating remove owner transaction:", err);
+        throw err;
+      }
+    },
+    [safeInfo, safeAddress, buildSafeTransaction, getSafeTransactionHash],
+  );
+
+  // Create transaction to change threshold
+  const createChangeThresholdTransaction = useCallback(
+    async (newThreshold: number): Promise<string | null> => {
+      if (!safeInfo) return null;
+
+      try {
+        // Encode the changeThreshold function call
+        const data = encodeFunctionData({
+          abi: SAFE_ABI,
+          functionName: "changeThreshold",
+          args: [BigInt(newThreshold)],
+        });
+
+        // Build the Safe transaction
+        const safeTx = await buildSafeTransaction([
+          {
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0, // Call operation
+          },
+        ]);
+
+        if (!safeTx) {
+          throw new Error("Failed to build transaction");
+        }
+
+        // Get the transaction hash
+        const txHash = await getSafeTransactionHash(safeTx);
+        return txHash;
+      } catch (err) {
+        console.error("Error creating change threshold transaction:", err);
+        throw err;
+      }
+    },
+    [safeInfo, safeAddress, buildSafeTransaction, getSafeTransactionHash],
+  );
+
+  // Create batched transaction for owner management (add/remove owners + change threshold)
+  const createBatchedOwnerManagementTransaction = useCallback(
+    async (
+      changes: Array<{ type: "add" | "remove"; address: Address }>,
+      newThreshold: number
+    ): Promise<string | null> => {
+      if (!safeInfo) return null;
+
+      try {
+        const transactions: Array<{
+          to: string;
+          value: string;
+          data: string;
+          operation: number;
+        }> = [];
+
+        // Process removals first (order matters in Safe's linked list)
+        const removals = changes.filter((c) => c.type === "remove");
+        const additions = changes.filter((c) => c.type === "add");
+
+        // Get current owners list
+        let currentOwners = [...safeInfo.owners];
+
+        // Create remove transactions
+        for (const removal of removals) {
+          const ownerIndex = currentOwners.findIndex(
+            (o) => o.toLowerCase() === removal.address.toLowerCase()
+          );
+
+          if (ownerIndex === -1) {
+            throw new Error(`Owner ${removal.address} not found`);
+          }
+
+          // Get the previous owner in the linked list
+          const prevOwner =
+            ownerIndex === 0
+              ? ("0x0000000000000000000000000000000000000001" as Address)
+              : currentOwners[ownerIndex - 1];
+
+          // For removals, we use current threshold (will be changed later)
+          const data = encodeFunctionData({
+            abi: SAFE_ABI,
+            functionName: "removeOwner",
+            args: [prevOwner, removal.address, BigInt(safeInfo.threshold)],
+          });
+
+          transactions.push({
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0,
+          });
+
+          // Update our local owners list for the next iteration
+          currentOwners = currentOwners.filter((_, i) => i !== ownerIndex);
+        }
+
+        // Create add transactions
+        for (const addition of additions) {
+          const data = encodeFunctionData({
+            abi: SAFE_ABI,
+            functionName: "addOwnerWithThreshold",
+            args: [addition.address, BigInt(safeInfo.threshold)],
+          });
+
+          transactions.push({
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0,
+          });
+
+          // Update our local owners list
+          currentOwners.push(addition.address);
+        }
+
+        // Finally, change threshold if it's different
+        if (newThreshold !== safeInfo.threshold) {
+          const data = encodeFunctionData({
+            abi: SAFE_ABI,
+            functionName: "changeThreshold",
+            args: [BigInt(newThreshold)],
+          });
+
+          transactions.push({
+            to: safeAddress,
+            value: "0",
+            data,
+            operation: 0,
+          });
+        }
+
+        // Build the batched Safe transaction
+        const safeTx = await buildSafeTransaction(transactions);
+
+        if (!safeTx) {
+          throw new Error("Failed to build transaction");
+        }
+
+        // Get the transaction hash
+        const txHash = await getSafeTransactionHash(safeTx);
+        return txHash;
+      } catch (err) {
+        console.error("Error creating batched owner management transaction:", err);
+        throw err;
+      }
+    },
+    [safeInfo, safeAddress, buildSafeTransaction, getSafeTransactionHash],
+  );
+
   return {
     safeInfo,
     safeName,
@@ -481,5 +752,9 @@ export default function useSafe(safeAddress: `0x${string}`) {
     contractNetworks,
     safeWalletData,
     kit: kitRef.current,
+    createAddOwnerTransaction,
+    createRemoveOwnerTransaction,
+    createChangeThresholdTransaction,
+    createBatchedOwnerManagementTransaction,
   };
 }

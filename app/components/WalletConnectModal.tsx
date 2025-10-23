@@ -293,7 +293,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                         className="input input-bordered join-item flex-1"
                         value={pairingCode}
                         onChange={(e) => setPairingCode(e.target.value)}
-                        placeholder="wc:..."
+                        placeholder="wc:your-link-here"
                         data-testid="wc-pairing-code-input"
                       />
                       <button

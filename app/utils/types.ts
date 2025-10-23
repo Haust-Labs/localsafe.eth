@@ -116,6 +116,14 @@ export interface SafeWalletData {
     visitedSafes?: {
       [chainId: string]: { [safeAddress: string]: { lastVisited: number } };
     };
+    safeConfig?: {
+      [chainId: string]: {
+        [safeAddress: string]: {
+          multiSendAddress?: string;
+          multiSendCallOnlyAddress?: string;
+        };
+      };
+    };
   };
 }
 
@@ -170,6 +178,8 @@ export interface NetworkFormState {
   id: string | number;
   blockExplorerUrl?: string;
   blockExplorerName?: string;
+  multiSendAddress?: string;
+  multiSendCallOnlyAddress?: string;
   nativeCurrency: {
     name: string;
     symbol: string;

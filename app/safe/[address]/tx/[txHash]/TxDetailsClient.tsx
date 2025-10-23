@@ -394,11 +394,40 @@ export default function TxDetailsClient() {
                   )}
                 </div>
               </div>
+              {/* Info Alert */}
+              <div className="alert alert-info">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  className="stroke-current shrink-0 w-6 h-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <div className="text-sm">
+                  <p className="font-semibold">Transaction Queued</p>
+                  <p>This transaction is saved and visible to all owners. Sign it now or return to the dashboard.</p>
+                </div>
+              </div>
+
               {/* Action buttons: Sign and Broadcast */}
               <div
                 className="mt-4 flex flex-wrap gap-2"
                 data-testid="tx-details-actions-row"
               >
+                <button
+                  className="btn btn-outline btn-primary"
+                  onClick={() => router.push(`/safe/${safeAddress}`)}
+                  title="Return to dashboard without signing"
+                  data-testid="tx-details-queue-btn"
+                >
+                  Back to Dashboard (Queued)
+                </button>
                 <button
                   className="btn btn-success"
                   onClick={handleSign}

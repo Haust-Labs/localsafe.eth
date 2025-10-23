@@ -70,6 +70,19 @@ export default function NetworkModal({
    * @param state - The state of the network form to add or update.
    */
   function handleNetworkAdd(state: NetworkFormState) {
+    // Build contracts object with MultiSend addresses if provided
+    const contracts: Record<string, any> = {};
+    if (state.multiSendAddress) {
+      contracts.multiSend = {
+        address: state.multiSendAddress as `0x${string}`,
+      };
+    }
+    if (state.multiSendCallOnlyAddress) {
+      contracts.multiSendCallOnly = {
+        address: state.multiSendCallOnlyAddress as `0x${string}`,
+      };
+    }
+
     addOrUpdateChain({
       id: Number(state.id),
       name: state.name,
@@ -83,6 +96,7 @@ export default function NetworkModal({
         }
         : undefined,
       nativeCurrency: state.nativeCurrency,
+      contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
     });
     setEditChain(null);
   }
@@ -147,6 +161,10 @@ export default function NetworkModal({
                               chain.blockExplorers?.default?.url || "",
                             blockExplorerName:
                               chain.blockExplorers?.default?.name || "",
+                            multiSendAddress:
+                              (chain.contracts as any)?.multiSend?.address || "",
+                            multiSendCallOnlyAddress:
+                              (chain.contracts as any)?.multiSendCallOnly?.address || "",
                             nativeCurrency: chain.nativeCurrency || {
                               name: "",
                               symbol: "",
