@@ -29,6 +29,18 @@ const localContractNetworks = {
     safeMigrationAddress: "0x526643F69b81B008F46d95CD5ced5eC0edFFDaC6",
     // Add any other required addresses here
   },
+  // Haust Mainnet (Chain ID: 3864)
+  3864: {
+    safeSingletonAddress: "0x8dBD3A49Fa6f53BBd082aa99d91c8ADeFbA8E7E7",
+    safeProxyFactoryAddress: "0x38E8Acc939923dEac6162Ac174b9683bbE4Dc945",
+    multiSendAddress: "0x7B21BBDBdE8D01Df591fdc2dc0bE9956Dde1e16C",
+    multiSendCallOnlyAddress: "0x32228dDEA8b9A2bd7f2d71A958fF241D79ca5eEC",
+    fallbackHandlerAddress: "0xcB4a8d3609A7CCa2D9c063a742f75c899BF2f7b5",
+    signMessageLibAddress: "0x309C7b0A0D2f250Be322739753386911E1187C4E",
+    createCallAddress: "0x8BbCaE989A0Bdf15c8E783357a0E5848e36233d0",
+    simulateTxAccessorAddress: "0xB59bD9861a97F9c309B7b73338503507580625D2",
+    tokenCallbackHandlerAddress: "0x63117fd9761850f4aC685457E484A01D752D5cC4",
+  },
 };
 
 // Helper to build contractNetworks for selected chainIds and Safe version
@@ -55,8 +67,10 @@ export async function buildContractNetworks(
 ): Promise<ContractNetworks> {
   const contractNetworks: ContractNetworks = {};
   for (const chainId of chainIds) {
-    if (chainId === 31337) {
-      contractNetworks[chainId] = localContractNetworks[31337];
+    // Check if it's a local/custom network first
+    if (localContractNetworks[chainId as keyof typeof localContractNetworks]) {
+      contractNetworks[chainId] =
+        localContractNetworks[chainId as keyof typeof localContractNetworks];
       continue;
     }
     try {
