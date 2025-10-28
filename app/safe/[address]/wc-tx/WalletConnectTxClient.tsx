@@ -8,10 +8,12 @@ import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import DataPreview from "@/app/components/DataPreview";
 import { formatEther } from "viem";
+import { useAccount } from "wagmi";
 
 export default function WalletConnectTxClient() {
   const router = useRouter();
   const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
+  const { chain } = useAccount();
   const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { buildSafeTransaction, kit, safeInfo } = useSafe(safeAddress);
 
@@ -237,9 +239,27 @@ export default function WalletConnectTxClient() {
               <span>0 (Call)</span>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3 text-right">
+            <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Data</span>
-              <DataPreview value={txParams.data || "0x"} />
+              <div className="flex flex-col items-end gap-2">
+                {txParams.data && txParams.data !== "0x" ? (
+                  <>
+                    <DataPreview value={txParams.data} />
+                    {chain && (
+                      <a
+                        href={`https://tools.cyfrin.io/abi-encoding?data=${txParams.data}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-xs btn-outline"
+                      >
+                        🔍 Decode Calldata
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No calldata (0x)</span>
+                )}
+              </div>
             </div>
 
             {txParams.gas && (
