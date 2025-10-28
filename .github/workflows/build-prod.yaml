@@ -28,7 +28,6 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
-          context: .
-          file: ./.devcontainer/Dockerfile
+          file: ./Dockerfile
           push: true
           tags: cr.haust.app/localsafe/eth:${{ github.ref_name }} 
