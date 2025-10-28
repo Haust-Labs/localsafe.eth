@@ -15,7 +15,7 @@ RUN pnpm install
 COPY . .
 
 # Set environment variables (will be overridden by K8s)
-ENV NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+ENV NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=""
 
 # Expose port
 EXPOSE 3000
