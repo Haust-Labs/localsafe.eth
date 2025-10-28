@@ -6,7 +6,7 @@ import { useWalletConnect } from "@/app/provider/WalletConnectProvider";
 import useSafe from "@/app/hooks/useSafe";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
-import { useAccount, useSignMessage, useSignTypedData } from "wagmi";
+import { useAccount } from "wagmi";
 
 export default function WalletConnectSignClient() {
   const router = useRouter();
@@ -14,8 +14,6 @@ export default function WalletConnectSignClient() {
   const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { signSafeTransaction } = useSafe(safeAddress);
   const { connector } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const { signTypedDataAsync } = useSignTypedData();
 
   const [signParams, setSignParams] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,7 +46,7 @@ export default function WalletConnectSignClient() {
   const currentRequest = pendingRequest || requestFromStorage;
 
   const handleSign = async () => {
-    if (!currentRequest || !signParams) return;
+    if (!currentRequest || !signParams || !connector) return;
 
     setIsProcessing(true);
     try {
@@ -59,18 +57,14 @@ export default function WalletConnectSignClient() {
         case "personal_sign": {
           // personal_sign params: [message, address]
           const [message] = signParams;
-          signature = await signMessageAsync({
-            message: message as string
-          });
+          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
           break;
         }
 
         case "eth_sign": {
           // eth_sign params: [address, message]
           const [, message] = signParams;
-          signature = await signMessageAsync({
-            message: message as string
-          });
+          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
           break;
         }
 
@@ -82,11 +76,9 @@ export default function WalletConnectSignClient() {
             ? JSON.parse(typedDataString)
             : typedDataString;
 
-          signature = await signTypedDataAsync({
-            domain: typedData.domain,
-            types: typedData.types,
-            primaryType: typedData.primaryType,
-            message: typedData.message,
+          signature = await (connector as unknown as { signTypedData: (args: unknown) => Promise<string> }).signTypedData({
+            account: safeAddress,
+            ...typedData,
           });
           break;
         }
