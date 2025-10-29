@@ -91,6 +91,35 @@ export default function TxDetailsClient() {
     ? safeTx.signatures?.has(connectedAddress.toLowerCase()) ?? false
     : false;
 
+  // Check if user can execute directly (they would be the last signer needed)
+  const canExecuteDirectly = safeTx && safeInfo && isOwner && !hasSignedThisTx
+    ? safeInfo.threshold - (safeTx.signatures?.size || 0) === 1
+    : false;
+
+  const [showSignDropdown, setShowSignDropdown] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown')) {
+        setShowSignDropdown(false);
+      }
+    }
+
+    if (showSignDropdown) {
+      // Delay adding the listener to avoid catching the same click that opened it
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 0);
+
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [showSignDropdown]);
+
   // Effects
   /**
    * Fetch the specific transaction by hash
@@ -661,26 +690,96 @@ export default function TxDetailsClient() {
                 >
                   Back to Dashboard (Queued)
                 </button>
-                <button
-                  className="btn btn-success"
-                  onClick={handleSign}
-                  disabled={!isOwner || signing || hasSignedThisTx}
-                  title={"Signing tx"}
-                  data-testid="tx-details-sign-btn"
-                >
-                  {!isOwner ? (
-                    "Only Safe owners can sign"
-                  ) : hasSignedThisTx ? (
-                    "Already Signed"
-                  ) : signing ? (
-                    <div className="flex items-center">
-                      <span>Signing in progress</span>
-                      <span className="loading loading-dots loading-xs ml-2" />
-                    </div>
-                  ) : (
-                    "Sign Transaction"
-                  )}
-                </button>
+                {canExecuteDirectly ? (
+                  <div className={`dropdown dropdown-top ${showSignDropdown ? 'dropdown-open' : ''}`}>
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      className="btn btn-success"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowSignDropdown(!showSignDropdown);
+                      }}
+                      disabled={signing || broadcasting}
+                    >
+                      {signing || broadcasting ? (
+                        <div className="flex items-center">
+                          <span>{signing ? "Signing" : "Executing"} in progress</span>
+                          <span className="loading loading-dots loading-xs ml-2" />
+                        </div>
+                      ) : (
+                        <>
+                          Sign Transaction
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4 ml-1"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                    {showSignDropdown && (
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mb-2 border border-base-300"
+                      >
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowSignDropdown(false);
+                              handleSign();
+                            }}
+                            disabled={signing || broadcasting}
+                            className="flex flex-col items-start py-3"
+                          >
+                            <span className="font-semibold">Sign Transaction</span>
+                            <span className="text-xs opacity-70">Add your signature to the queue</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowSignDropdown(false);
+                              handleBroadcast();
+                            }}
+                            disabled={signing || broadcasting}
+                            className="flex flex-col items-start py-3"
+                          >
+                            <span className="font-semibold">Execute Transaction</span>
+                            <span className="text-xs opacity-70">Execute immediately (you're the last signer)</span>
+                          </button>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-success"
+                    onClick={handleSign}
+                    disabled={!isOwner || signing || hasSignedThisTx}
+                    title={"Signing tx"}
+                    data-testid="tx-details-sign-btn"
+                  >
+                    {!isOwner ? (
+                      "Only Safe owners can sign"
+                    ) : hasSignedThisTx ? (
+                      "Already Signed"
+                    ) : signing ? (
+                      <div className="flex items-center">
+                        <span>Signing in progress</span>
+                        <span className="loading loading-dots loading-xs ml-2" />
+                      </div>
+                    ) : (
+                      "Sign Transaction"
+                    )}
+                  </button>
+                )}
                 <button
                   className="btn btn-primary"
                   onClick={handleBroadcast}
