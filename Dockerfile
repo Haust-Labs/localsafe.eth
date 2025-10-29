@@ -28,7 +28,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
-ENV NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=""
+ENV NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID="95529b41a5f447abe23fa9b7cd3f01a5"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
