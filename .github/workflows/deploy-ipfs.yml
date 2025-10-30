@@ -44,5 +44,5 @@ jobs:
       - name: Output IPFS CID
         run: |
           echo "::notice title=IPFS Deployment::Successfully deployed to IPFS!"
-          echo "::notice title=IPFS CID::${{ steps.pinata.outputs.cid }}"
-          echo "::notice title=IPFS Gateway::https://gateway.pinata.cloud/ipfs/${{ steps.pinata.outputs.cid }}"
+          echo "::notice title=IPFS CID::${{ steps.pinata.outputs.hash }}"
+          echo "::notice title=IPFS Gateway::${{ steps.pinata.outputs.uri }}"
