@@ -23,11 +23,13 @@ This project automatically deploys to IPFS via Pinata when you create a new rele
 1. Go to your GitHub repository
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
-4. Add two secrets:
+4. Add three secrets:
    - Name: `PINATA_API_KEY`
      - Value: Your Pinata API Key
    - Name: `PINATA_SECRET_KEY`
      - Value: Your Pinata API Secret
+   - Name: `WALLETCONNECT_PROJECT_ID`
+     - Value: Your WalletConnect Project ID (get one free at [WalletConnect Cloud](https://cloud.walletconnect.com/))
 
 ### How to Deploy
 
@@ -87,3 +89,4 @@ The CID (Content Identifier) will be displayed in the GitHub Actions logs.
 - **Build fails**: Check that `pnpm run build` works locally
 - **Pinata authentication fails**: Verify your API keys are correct in GitHub Secrets
 - **Deployment succeeds but CID not displayed**: Check the Actions log output for the CID
+- **WalletConnect error in deployed app**: Ensure `WALLETCONNECT_PROJECT_ID` secret is set in GitHub Secrets
