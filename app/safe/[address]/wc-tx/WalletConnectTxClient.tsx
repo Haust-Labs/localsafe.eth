@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useWalletConnect } from "@/app/provider/WalletConnectProvider";
 import useSafe from "@/app/hooks/useSafe";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import DataPreview from "@/app/components/DataPreview";
 import { formatEther } from "viem";
+import { useAccount } from "wagmi";
 
-export default function WalletConnectTxClient() {
-  const router = useRouter();
-  const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
+export default function WalletConnectTxClient({
+  safeAddress,
+}: {
+  safeAddress: `0x${string}`;
+}) {
+  const navigate = useNavigate();
+  const { chain } = useAccount();
   const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { buildSafeTransaction, kit, safeInfo } = useSafe(safeAddress);
 
@@ -91,7 +96,7 @@ export default function WalletConnectTxClient() {
       }
 
       // Navigate to the transaction signing page
-      router.push(`/safe/${safeAddress}/tx/${safeTxHash}`);
+      navigate(`/safe/${safeAddress}/tx/${safeTxHash}`);
     } catch (error) {
       console.error("Failed to approve transaction:", error);
       alert(`Failed to approve transaction: ${error instanceof Error ? error.message : String(error)}`);
@@ -129,7 +134,7 @@ export default function WalletConnectTxClient() {
     }
 
     // Navigate back to safe
-    router.push(`/safe/${safeAddress}`);
+    navigate(`/safe/${safeAddress}`);
   };
 
   if (!currentRequest || !txParams) {
@@ -140,7 +145,7 @@ export default function WalletConnectTxClient() {
             <p>No pending transaction request found.</p>
             <button
               className="btn btn-primary mt-4"
-              onClick={() => router.push(`/safe/${safeAddress}`)}
+              onClick={() => navigate(`/safe/${safeAddress}`)}
             >
               Back to Safe
             </button>
@@ -177,7 +182,7 @@ export default function WalletConnectTxClient() {
                 clearPendingRequest();
               }
             }
-            router.push(`/safe/${safeAddress}`);
+            navigate(`/safe/${safeAddress}`);
           }}
           data-testid="wc-tx-cancel-btn"
         >
@@ -237,9 +242,27 @@ export default function WalletConnectTxClient() {
               <span>0 (Call)</span>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3 text-right">
+            <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Data</span>
-              <DataPreview value={txParams.data || "0x"} />
+              <div className="flex flex-col items-end gap-2">
+                {txParams.data && txParams.data !== "0x" ? (
+                  <>
+                    <DataPreview value={txParams.data} />
+                    {chain && (
+                      <a
+                        href={`https://tools.cyfrin.io/abi-encoding?data=${encodeURIComponent(txParams.data)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-xs btn-outline"
+                      >
+                        🔍 Decode Calldata
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No calldata (0x)</span>
+                )}
+              </div>
             </div>
 
             {txParams.gas && (

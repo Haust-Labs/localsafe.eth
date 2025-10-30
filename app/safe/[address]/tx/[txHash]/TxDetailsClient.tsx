@@ -2,13 +2,12 @@
 
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
-import { useParams, useRouter } from "next/navigation";
+import { useNavigate, Link } from "react-router-dom";
 import useSafe from "@/app/hooks/useSafe";
 import { useEffect, useState, useRef } from "react";
 import { EthSafeTransaction, EthSafeSignature } from "@safe-global/protocol-kit";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import DataPreview from "@/app/components/DataPreview";
-import BtnCancel from "@/app/components/BtnCancel";
 import { BroadcastModal } from "@/app/components/BroadcastModal";
 import { useAccount } from "wagmi";
 import { ethers } from "ethers";
@@ -48,11 +47,16 @@ function getChainNameForCyfrin(chainId: number): string {
  *
  * @returns {JSX.Element} The rendered TxDetailsClient component.
  */
-export default function TxDetailsClient() {
+export default function TxDetailsClient({
+  safeAddress,
+  txHash,
+}: {
+  safeAddress: `0x${string}`;
+  txHash: string;
+}) {
   // Hooks
   const { chain, address: connectedAddress } = useAccount();
-  const { address: safeAddress, txHash } = useParams<{ address: `0x${string}`; txHash: string }>();
-  const router = useRouter();
+  const navigate = useNavigate();
   const {
     signSafeTransaction,
     broadcastSafeTransaction,
@@ -90,6 +94,42 @@ export default function TxDetailsClient() {
   const hasSignedThisTx = safeTx && connectedAddress
     ? safeTx.signatures?.has(connectedAddress.toLowerCase()) ?? false
     : false;
+
+  // Check if user can execute directly (they would be the last signer needed)
+  const canExecuteDirectly = safeTx && safeInfo && isOwner && !hasSignedThisTx
+    ? safeInfo.threshold - (safeTx.signatures?.size || 0) === 1
+    : false;
+
+  const [showSignDropdown, setShowSignDropdown] = useState(false);
+  const [showCollabDropdown, setShowCollabDropdown] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+
+      // Don't close if clicking on a dropdown button (let the button's toggle handle it)
+      const isDropdownButton = target.closest('button[type="button"]')?.closest('.dropdown');
+      if (isDropdownButton) {
+        return;
+      }
+
+      // Check if click is outside all dropdowns
+      if (!target.closest('.dropdown')) {
+        setShowSignDropdown(false);
+        setShowCollabDropdown(false);
+      }
+    }
+
+    if (showSignDropdown || showCollabDropdown) {
+      // Add listener immediately
+      document.addEventListener('mousedown', handleClickOutside);
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSignDropdown, showCollabDropdown]);
 
   // Effects
   /**
@@ -232,6 +272,11 @@ export default function TxDetailsClient() {
       setBroadcastError(null);
       setShowModal(true);
       setToast({ type: "success", message: "Broadcast successful!" });
+
+      // Remove the transaction from the pending list after successful broadcast
+      if (chain?.id) {
+        removeTransaction(safeAddress, undefined, Number(safeTx.data.nonce), String(chain.id));
+      }
     } catch (err) {
       setBroadcastError(err instanceof Error ? err.message : String(err));
       setShowModal(true);
@@ -423,11 +468,23 @@ export default function TxDetailsClient() {
   return (
     <AppSection testid="tx-details-section">
       <div className="mb-4">
-        <BtnCancel
-          href={`/safe/${safeAddress}`}
-          label="Back to Safe"
+        <Link
+          to={`/safe/${safeAddress}`}
+          className="btn btn-ghost btn-secondary"
           data-testid="tx-details-cancel-btn"
-        />
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          Back to Safe
+        </Link>
       </div>
       <AppCard title="Safe Transaction" data-testid="tx-details-card">
         <div className="flex flex-col gap-4" data-testid="tx-details-content">
@@ -498,7 +555,7 @@ export default function TxDetailsClient() {
                         <DataPreview value={safeTx.data.data} />
                         {chain && (
                           <a
-                            href={`https://tools.cyfrin.io/abi-encoding?data=${safeTx.data.data}`}
+                            href={`https://tools.cyfrin.io/abi-encoding?data=${encodeURIComponent(safeTx.data.data)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-xs btn-outline"
@@ -597,7 +654,7 @@ export default function TxDetailsClient() {
                   <div className="flex items-center justify-between">
                     <div className="divider">EIP-712 Signature Data</div>
                     <a
-                      href={`https://tools.cyfrin.io/safe-hash?safeAddress=${safeAddress}&chainId=${getChainNameForCyfrin(chain.id)}&safeVersion=${safeInfo?.version || "1.4.1"}&nonce=${safeTx.data.nonce}&to=${safeTx.data.to}&value=${safeTx.data.value}&data=${safeTx.data.data}&operation=${safeTx.data.operation}&safeTxGas=${safeTx.data.safeTxGas}&baseGas=${safeTx.data.baseGas}&gasPrice=${safeTx.data.gasPrice}&gasToken=${safeTx.data.gasToken}&refundReceiver=${safeTx.data.refundReceiver}`}
+                      href={`https://tools.cyfrin.io/safe-hash?safeAddress=${encodeURIComponent(safeAddress)}&chainId=${encodeURIComponent(getChainNameForCyfrin(chain.id))}&safeVersion=${encodeURIComponent(safeInfo?.version || "1.4.1")}&nonce=${encodeURIComponent(safeTx.data.nonce)}&to=${encodeURIComponent(safeTx.data.to)}&value=${encodeURIComponent(safeTx.data.value)}&data=${encodeURIComponent(safeTx.data.data)}&operation=${encodeURIComponent(safeTx.data.operation)}&safeTxGas=${encodeURIComponent(safeTx.data.safeTxGas)}&baseGas=${encodeURIComponent(safeTx.data.baseGas)}&gasPrice=${encodeURIComponent(safeTx.data.gasPrice)}&gasToken=${encodeURIComponent(safeTx.data.gasToken)}&refundReceiver=${encodeURIComponent(safeTx.data.refundReceiver)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-xs btn-outline whitespace-nowrap"
@@ -648,97 +705,230 @@ export default function TxDetailsClient() {
                 </div>
               </div>
 
-              {/* Action buttons: Sign and Broadcast */}
-              <div
-                className="mt-4 flex flex-wrap gap-2"
-                data-testid="tx-details-actions-row"
-              >
-                <button
-                  className="btn btn-outline btn-primary"
-                  onClick={() => router.push(`/safe/${safeAddress}`)}
-                  title="Return to dashboard without signing"
-                  data-testid="tx-details-queue-btn"
-                >
-                  Back to Dashboard (Queued)
-                </button>
-                <button
-                  className="btn btn-success"
-                  onClick={handleSign}
-                  disabled={!isOwner || signing || hasSignedThisTx}
-                  title={"Signing tx"}
-                  data-testid="tx-details-sign-btn"
-                >
-                  {!isOwner ? (
-                    "Only Safe owners can sign"
-                  ) : hasSignedThisTx ? (
-                    "Already Signed"
-                  ) : signing ? (
-                    <div className="flex items-center">
-                      <span>Signing in progress</span>
-                      <span className="loading loading-dots loading-xs ml-2" />
+              {/* Action buttons organized by purpose */}
+              <div className="mt-4 flex flex-col gap-4">
+                {/* Navigation */}
+                <div>
+                  <button
+                    className="btn btn-outline btn-primary"
+                    onClick={() => navigate(`/safe/${safeAddress}`)}
+                    title="Return to dashboard without signing"
+                    data-testid="tx-details-queue-btn"
+                  >
+                    Back to Dashboard (Queued)
+                  </button>
+                </div>
+
+                {/* Primary Actions: Sign and Broadcast */}
+                <div className="flex flex-wrap gap-2">
+                  <div className="text-sm font-semibold w-full mb-1">Primary Actions</div>
+                  {canExecuteDirectly ? (
+                    <div className={`dropdown dropdown-top ${showSignDropdown ? 'dropdown-open' : ''}`}>
+                      <button
+                        type="button"
+                        tabIndex={0}
+                        className="btn btn-success"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowSignDropdown(!showSignDropdown);
+                        }}
+                        disabled={signing || broadcasting}
+                      >
+                        {signing || broadcasting ? (
+                          <div className="flex items-center">
+                            <span>{signing ? "Signing" : "Executing"} in progress</span>
+                            <span className="loading loading-dots loading-xs ml-2" />
+                          </div>
+                        ) : (
+                          <>
+                            Sign Transaction
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={2}
+                              stroke="currentColor"
+                              className="w-4 h-4 ml-1"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                      {showSignDropdown && (
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mb-2 border border-base-300"
+                        >
+                          <li>
+                            <button
+                              onClick={() => {
+                                setShowSignDropdown(false);
+                                handleSign();
+                              }}
+                              disabled={signing || broadcasting}
+                              className="flex flex-col items-start py-3"
+                            >
+                              <span className="font-semibold">Sign Transaction</span>
+                              <span className="text-xs opacity-70">Add your signature to the queue</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              onClick={() => {
+                                setShowSignDropdown(false);
+                                handleBroadcast();
+                              }}
+                              disabled={signing || broadcasting}
+                              className="flex flex-col items-start py-3"
+                            >
+                              <span className="font-semibold">Execute Transaction</span>
+                              <span className="text-xs opacity-70">Execute immediately (you're the last signer)</span>
+                            </button>
+                          </li>
+                        </ul>
+                      )}
                     </div>
                   ) : (
-                    "Sign Transaction"
+                    <button
+                      className="btn btn-success"
+                      onClick={handleSign}
+                      disabled={!isOwner || signing || hasSignedThisTx}
+                      title={"Signing tx"}
+                      data-testid="tx-details-sign-btn"
+                    >
+                      {!isOwner ? (
+                        "Only Safe owners can sign"
+                      ) : hasSignedThisTx ? (
+                        "Already Signed"
+                      ) : signing ? (
+                        <div className="flex items-center">
+                          <span>Signing in progress</span>
+                          <span className="loading loading-dots loading-xs ml-2" />
+                        </div>
+                      ) : (
+                        "Sign Transaction"
+                      )}
+                    </button>
                   )}
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleBroadcast}
-                  disabled={
-                    !(
-                      safeTx &&
-                      safeInfo &&
-                      safeTx.signatures?.size >= safeInfo.threshold
-                    ) || broadcasting
-                  }
-                  title="Broadcasting tx"
-                  data-testid="tx-details-broadcast-btn"
-                >
-                  {broadcasting ? (
-                    <div className="flex items-center">
-                      <span>Broadcasting in progress</span>
-                      <span className="loading loading-dots loading-xs ml-2" />
-                    </div>
-                  ) : (
-                    "Broadcast Transaction"
-                  )}
-                </button>
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={handleExportSingle}
-                  disabled={!safeTx}
-                  title="Export this transaction as JSON"
-                  data-testid="tx-details-export-btn"
-                >
-                  Export Transaction
-                </button>
-                <button
-                  className="btn btn-secondary btn-outline btn-sm"
-                  onClick={handleShareLink}
-                  disabled={!safeTx}
-                  title="Copy shareable link with transaction and all signatures"
-                  data-testid="tx-details-share-link-btn"
-                >
-                  Share Link
-                </button>
-                <button
-                  className="btn btn-accent btn-outline btn-sm"
-                  onClick={handleShareSignature}
-                  disabled={!safeTx || !hasSignedThisTx}
-                  title="Copy shareable link with only your signature"
-                  data-testid="tx-details-share-signature-btn"
-                >
-                  Share Signature
-                </button>
-                <button
-                  className="btn btn-info btn-outline btn-sm"
-                  onClick={() => setShowAddSigModal(true)}
-                  disabled={!safeTx}
-                  title="Manually add a signature to this transaction"
-                  data-testid="tx-details-add-signature-btn"
-                >
-                  Add Signature
-                </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleBroadcast}
+                    disabled={
+                      !(
+                        safeTx &&
+                        safeInfo &&
+                        safeTx.signatures?.size >= safeInfo.threshold
+                      ) || broadcasting
+                    }
+                    title="Broadcasting tx"
+                    data-testid="tx-details-broadcast-btn"
+                  >
+                    {broadcasting ? (
+                      <div className="flex items-center">
+                        <span>Broadcasting in progress</span>
+                        <span className="loading loading-dots loading-xs ml-2" />
+                      </div>
+                    ) : (
+                      "Broadcast Transaction"
+                    )}
+                  </button>
+                </div>
+
+                {/* Collaboration Tools */}
+                <div className="flex flex-wrap gap-2">
+                  <div className="text-sm font-semibold w-full mb-1">Collaboration Tools</div>
+                  <div className={`dropdown dropdown-top ${showCollabDropdown ? 'dropdown-open' : ''}`}>
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      className="btn btn-outline btn-sm"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowCollabDropdown(!showCollabDropdown);
+                      }}
+                      disabled={!safeTx}
+                      title="Share and export tools"
+                    >
+                      Share & Export
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-4 h-4 ml-1"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                    {showCollabDropdown && (
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mb-2 border border-base-300"
+                      >
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowCollabDropdown(false);
+                              handleExportSingle();
+                            }}
+                            disabled={!safeTx}
+                            className="flex flex-col items-start py-3"
+                            data-testid="tx-details-export-btn"
+                          >
+                            <span className="font-semibold">📤 Export Transaction</span>
+                            <span className="text-xs opacity-70">Download as JSON file</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowCollabDropdown(false);
+                              handleShareLink();
+                            }}
+                            disabled={!safeTx}
+                            className="flex flex-col items-start py-3"
+                            data-testid="tx-details-share-link-btn"
+                          >
+                            <span className="font-semibold">🔗 Share Link</span>
+                            <span className="text-xs opacity-70">Copy link with all signatures</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowCollabDropdown(false);
+                              handleShareSignature();
+                            }}
+                            disabled={!safeTx || !hasSignedThisTx}
+                            className="flex flex-col items-start py-3"
+                            data-testid="tx-details-share-signature-btn"
+                          >
+                            <span className="font-semibold">✍️ Share Signature</span>
+                            <span className="text-xs opacity-70">Copy link with your signature only</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => {
+                              setShowCollabDropdown(false);
+                              setShowAddSigModal(true);
+                            }}
+                            disabled={!safeTx}
+                            className="flex flex-col items-start py-3"
+                            data-testid="tx-details-add-signature-btn"
+                          >
+                            <span className="font-semibold">➕ Add Signature</span>
+                            <span className="text-xs opacity-70">Manually add another signer's signature</span>
+                          </button>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
               {/* BroadcastModal for broadcast feedback */}
               {showModal && (
@@ -751,7 +941,7 @@ export default function TxDetailsClient() {
                   onSuccess={() => {
                     removeTransaction(safeAddress);
                     setShowModal(false);
-                    router.push(`/safe/${safeAddress}`);
+                    navigate(`/safe/${safeAddress}`);
                   }}
                   successLabel="Back to Safe"
                   testid="tx-details-broadcast-modal"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 
@@ -21,6 +22,7 @@ const KNOWN_KEYS = [
 ];
 
 export default function AdvancedSettingsClient() {
+  const navigate = useNavigate();
   const [storageItems, setStorageItems] = useState<StorageItem[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -172,9 +174,9 @@ export default function AdvancedSettingsClient() {
   return (
     <AppSection>
       <div className="mb-4">
-        <a href="/accounts" className="btn btn-ghost btn-sm">
-          ← Back to Accounts
-        </a>
+        <button onClick={() => navigate(-1)} className="btn btn-ghost btn-sm">
+          ← Back
+        </button>
       </div>
       <AppCard title="Advanced Settings">
         <div className="flex flex-col gap-4">

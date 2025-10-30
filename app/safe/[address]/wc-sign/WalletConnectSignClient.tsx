@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useWalletConnect } from "@/app/provider/WalletConnectProvider";
 import useSafe from "@/app/hooks/useSafe";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage, useSignTypedData } from "wagmi";
 
-export default function WalletConnectSignClient() {
-  const router = useRouter();
-  const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
+export default function WalletConnectSignClient({
+  safeAddress,
+}: {
+  safeAddress: `0x${string}`;
+}) {
+  const navigate = useNavigate();
   const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
-  const { signSafeTransaction } = useSafe(safeAddress);
+  const { signSafeTransaction, kit } = useSafe(safeAddress);
   const { connector } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { signTypedDataAsync } = useSignTypedData();
 
   const [signParams, setSignParams] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,46 +51,59 @@ export default function WalletConnectSignClient() {
   const currentRequest = pendingRequest || requestFromStorage;
 
   const handleSign = async () => {
-    if (!currentRequest || !signParams || !connector) return;
+    if (!currentRequest || !signParams || !kit) return;
 
     setIsProcessing(true);
     try {
-      let signature: string;
+      // For Safe wallets, we need to wrap the original message in a SafeMessage structure
+      let messageToSign: string | object;
 
-      // Handle different signing methods
+      // Extract the message based on the signing method
       switch (method) {
         case "personal_sign": {
           // personal_sign params: [message, address]
-          const [message] = signParams;
-          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
+          messageToSign = signParams[0];
           break;
         }
 
         case "eth_sign": {
           // eth_sign params: [address, message]
-          const [, message] = signParams;
-          signature = await (connector as unknown as { signMessage: (args: { message: string; account: string }) => Promise<string> }).signMessage({ message, account: safeAddress });
+          messageToSign = signParams[1];
           break;
         }
 
         case "eth_signTypedData":
         case "eth_signTypedData_v4": {
           // signTypedData params: [address, typedData]
-          const [, typedDataString] = signParams;
-          const typedData = typeof typedDataString === "string"
+          const typedDataString = signParams[1];
+          messageToSign = typeof typedDataString === "string"
             ? JSON.parse(typedDataString)
             : typedDataString;
-
-          signature = await (connector as unknown as { signTypedData: (args: unknown) => Promise<string> }).signTypedData({
-            account: safeAddress,
-            ...typedData,
-          });
           break;
         }
 
         default:
           throw new Error(`Unsupported signing method: ${method}`);
       }
+
+      // Create a Safe message (wraps the original message)
+      const safeMessage = await kit.createMessage(messageToSign as string);
+
+      // Sign the Safe message with the current owner's EOA
+      const signedMessage = await kit.signMessage(safeMessage);
+
+      // Get the signature for this owner
+      const signerAddress = await kit.getSafeProvider().getSignerAddress();
+      if (!signerAddress) {
+        throw new Error("No signer address available");
+      }
+      const ownerSignature = signedMessage.getSignature(signerAddress);
+
+      if (!ownerSignature) {
+        throw new Error("Failed to get signature from signed message");
+      }
+
+      const signature = ownerSignature.data;
 
       // Respond to WalletConnect with the signature
       await approveRequest(currentRequest.topic, {
@@ -100,11 +118,46 @@ export default function WalletConnectSignClient() {
       }
 
       alert("Message signed successfully!");
-      router.push(`/safe/${safeAddress}`);
+      navigate(`/safe/${safeAddress}`);
     } catch (error) {
       console.error("Failed to sign message:", error);
-      alert(`Failed to sign message: ${error instanceof Error ? error.message : String(error)}`);
-      setIsProcessing(false);
+
+      // Check if user rejected the request
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isUserRejection = errorMessage.toLowerCase().includes('reject') ||
+                              errorMessage.toLowerCase().includes('denied') ||
+                              errorMessage.toLowerCase().includes('cancel');
+
+      if (isUserRejection) {
+        // User rejected - clean up and reject the WalletConnect request
+        try {
+          await rejectRequest(
+            currentRequest.topic,
+            {
+              code: 4001,
+              message: "User rejected the signing request",
+            },
+            currentRequest.id
+          );
+        } catch (rejectError) {
+          console.error("Failed to reject WalletConnect request:", rejectError);
+        }
+
+        // Clear session storage
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("wc-pending-request");
+        }
+
+        // Clear pending request state
+        clearPendingRequest();
+
+        // Navigate back
+        navigate(`/safe/${safeAddress}`);
+      } else {
+        // Other error - show alert and allow retry
+        alert(`Failed to sign message: ${errorMessage}`);
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -131,7 +184,7 @@ export default function WalletConnectSignClient() {
       clearPendingRequest();
     }
 
-    router.push(`/safe/${safeAddress}`);
+    navigate(`/safe/${safeAddress}`);
   };
 
   if (!currentRequest || !signParams) {
@@ -142,7 +195,7 @@ export default function WalletConnectSignClient() {
             <p>No pending signing request found.</p>
             <button
               className="btn btn-primary mt-4"
-              onClick={() => router.push(`/safe/${safeAddress}`)}
+              onClick={() => navigate(`/safe/${safeAddress}`)}
             >
               Back to Safe
             </button>
@@ -204,7 +257,7 @@ export default function WalletConnectSignClient() {
                 clearPendingRequest();
               }
             }
-            router.push(`/safe/${safeAddress}`);
+            navigate(`/safe/${safeAddress}`);
           }}
           data-testid="wc-sign-cancel-btn"
         >

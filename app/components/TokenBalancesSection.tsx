@@ -88,6 +88,10 @@ export default function TokenBalancesSection({
       } catch {
         setTokens([]);
       }
+    } else {
+      // Clear tokens and balances if switching to a chain/safe with no stored tokens
+      setTokens([]);
+      setBalances([]);
     }
   }, [STORAGE_KEY]);
 

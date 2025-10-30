@@ -4,17 +4,17 @@
 
 A 100% local web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. No worrying about the SafeAPI being compromised... Run an instance yourself!
 
+**v0.2.0** - Now with IPFS deployment support and enhanced UI!
+
 - [localsafe.eth](#localsafeeth)
   - [Features](#features)
-  - [Tech Stack:](#tech-stack)
   - [Quickstart](#quickstart)
     - [Requirements](#requirements)
     - [Running the dev server](#running-the-dev-server)
     - [Running E2E Tests](#running-e2e-tests)
     - [Run localsafe.eth with Production Build](#run-localsafeeth-with-production-build)
+    - [Deploying to IPFS](#deploying-to-ipfs)
     - [Anvil State Management: --dump-state \& --load-state](#anvil-state-management---dump-state----load-state)
-    - [Example: Test Runner Script](#example-test-runner-script)
-    - [Example: Playwright Test (export)](#example-playwright-test-export)
   - [Developer Notes](#developer-notes)
   - [Deploying Safe Contracts Locally with `safe-smart-account`](#deploying-safe-contracts-locally-with-safe-smart-account)
   - [TODO](#todo)
@@ -23,22 +23,16 @@ A 100% local web interface for managing multisignature wallets inspired by SafeW
 
 ## Features
 
-- **Safe Account Dashboard**: View Safe details, owners, threshold, nonce, and balance.
-- **Transaction Workflow**: Create, import, export, and execute Safe transactions.
+- **Safe Account Dashboard**: View Safe details, owners, threshold, nonce, and balance with enhanced UI organization.
+- **Transaction Workflow**: Create, import, export, and execute Safe transactions with improved collaboration tools.
+- **WalletConnect Integration**: Sign messages and transactions from dApps via WalletConnect v2.
+- **IPFS Deployment**: Automated deployment to IPFS via Pinata when creating GitHub releases.
 - **SafeWallet Data Import/Export**: Backup and restore address book, visited accounts, and undeployed safes.
-- **Modal Interactions**: Deployment, broadcast, error, and import/export modals.
-- **Wallet Connection**: MetaMask and RainbowKit integration.
-- **Client-Side State**: All wallet and transaction logic is handled client-side using wagmi, RainbowKit, and Safe Protocol Kit.
-
-## Tech Stack:
-
-- **Next.js**: React framework for server-side rendering and static site generation.
-- **TypeScript**: Superset of JavaScript for type safety.
-- **Tailwind CSS & DaisyUI**: Utility-first CSS framework and component library for styling.
-- **wagmi & RainbowKit**: React hooks and components for Ethereum wallet management.
-- **Safe Protocol Kit**: SDK for interacting with Safe contracts.
-- **Synpress & Playwright**: E2E testing with MetaMask automation and browser control.
-- **Foundry & Anvil**: Smart contract development and local Ethereum node for testing.
+- **Calldata Decoding**: Decode transaction calldata directly in the UI for better transparency.
+- **Collaboration Tools**: Easy sharing of transactions, signatures, and links with organized dropdown menus.
+- **Wallet Connection**: MetaMask and RainbowKit integration with multiple wallet support.
+- **Client-Side State**: All wallet and Safe logic is handled client-side using wagmi, RainbowKit, and Safe Protocol Kit.
+- **Hash-Based Routing**: Uses React Router with hash-based routing for static IPFS deployment compatibility.
 
 ## Quickstart
 
@@ -76,6 +70,8 @@ A 100% local web interface for managing multisignature wallets inspired by SafeW
 
 ### Running E2E Tests
 
+> **Note**: The testing infrastructure is currently in need of refactoring from Synpress. The existing tests may require updates to work with the latest changes.
+<!-- 
 1. Ensure you have [Anvil](https://getfoundry.sh/) installed and updated.
 
 2. You follow the steps above to clone the repo, install dependencies, and create a `.env` file.
@@ -106,7 +102,7 @@ _Note: there is a utility command `pnpm run test:clean` to clean up any wild pro
 - Tests are written using Synpress (MetaMask automation) and Playwright.
 - Test scripts are located in `tests/` and cover Safe account creation, dashboard, wallet import/export, and transaction workflows.
 - The test runner script (`tests/scripts/start-anvil-and-test.sh`) starts Anvil, runs Synpress, and then Playwright tests.
-- UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.But headless tests should work fine.
+- UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.But headless tests should work fine. -->
 
 ### Run localsafe.eth with Production Build
 
@@ -115,6 +111,29 @@ To run the app with a production build locally and run the optimized version:
 ```bash
   pnpm run localsafe
 ```
+
+### Deploying to IPFS
+
+LocalSafe can be automatically deployed to IPFS via Pinata when you create a GitHub release or push a version tag. See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete setup instructions.
+
+**Quick Deploy:**
+```bash
+# Create and push a version tag
+git tag v0.2.0
+git push origin v0.2.0
+
+# Or create a GitHub Release via the UI
+```
+
+The deployment workflow will:
+1. Build the static site (`pnpm run build`)
+2. Deploy to IPFS via Pinata
+3. Output the IPFS CID and gateway URLs in the GitHub Actions logs
+
+**Access your deployment:**
+- Pinata Gateway: `https://gateway.pinata.cloud/ipfs/<CID>`
+- IPFS Gateway: `https://ipfs.io/ipfs/<CID>`
+- Cloudflare IPFS Gateway: `https://cloudflare-ipfs.com/ipfs/<CID>`
 
 ### Anvil State Management: --dump-state & --load-state
 
@@ -135,7 +154,7 @@ To ensure deterministic E2E tests, we use Anvil’s state management:
   "anvil": "anvil --load-state ./anvil-safe-state.json --block-time 1",
   "test:e2e": "bash tests/scripts/start-anvil-and-test.sh"
   ```
-
+<!-- 
 ### Example: Test Runner Script
 
 ```bash
@@ -188,16 +207,18 @@ const exportedJson = await page.evaluate(() => {
   return window.exportTx && window.exportTx(window.safeAddress);
 });
 expect(exportedJson).toContain("expected data");
-```
+``` -->
 
 ## Developer Notes
 
-- All wallet and Safe logic is handled client-side for maximum privacy and flexibility.
-- The project structure is modular, with reusable components and hooks.
-- E2E tests require manual cache management when switching environments.
-- For local contract deployment, see the instructions below.
-- Ensure `.cache-synpress` is built for the environment you are using (devcontainer vs local). Else you may face issues with Synpress not finding MetaMask extension. Please refresh the cache by running `pnpm exec synpress --force` again if you switch environments.
-- Sometimes some `next-server` and `anvil` processes may remain running in the background. Please kill them if you face weird issues.
+- **Client-Side Architecture**: All wallet and Safe logic is handled client-side for maximum privacy and flexibility.
+- **Hash-Based Routing**: Uses React Router with hash-based routing (`HashRouter`) to ensure compatibility with static IPFS deployments where server-side routing is not available.
+- **Modular Structure**: The project structure is modular, with reusable components and hooks for maintainability.
+- **WalletConnect Integration**: WalletConnect v2 is integrated for dApp connections and signing requests. Session data is persisted in localStorage.
+<!-- - **E2E Testing**: Tests require manual cache management when switching environments. The testing infrastructure is currently in need of refactoring from Synpress. -->
+<!-- - **Synpress Cache**: Ensure `.cache-synpress` is built for the environment you are using (devcontainer vs local). Refresh the cache by running `pnpm exec synpress --force` if you switch environments. -->
+- **Process Cleanup**: Sometimes `next-server` and `anvil` processes may remain running in the background. Use `pnpm run test:clean` to kill them.
+- **Local Contract Deployment**: For deploying Safe contracts locally, see the instructions below.
 
 ## Deploying Safe Contracts Locally with `safe-smart-account`
 
@@ -238,25 +259,33 @@ To run your own local Safe contracts for development, follow these steps:
 
 ## TODO
 
+- [ ] Refactor E2E testing infrastructure from Synpress to support latest features.
+- [ ] Fix dropdown toggle behavior when clicking the button repeatedly.
 - [ ] Improve devcontainer setup for E2E tests; currently, UI mode has limitations.
 - [ ] Ensure smooth DX when switching between local and devcontainer environments and wild processes cleaning (next-server, anvil).
-- [ ] Adapted for SafeWallet@1.4.1-3 contracts; need to adapt to any versions.
+- [ ] Adapt for different SafeWallet contract versions (currently optimized for 1.4.1-3).
 - [ ] Automate `version` value in `DEFAULT_SAFE_WALLET_DATA` constant (`app/utils/constants.ts` hardcoded to `3.0.0` now).
 - [ ] Ensure responsiveness of UI on every screen size.
 - [ ] Optimize reactivity from first batch of code.
 - [ ] Add more detailed error handling and user feedback (tooltips, notifications).
 - [ ] Add more comments and documentation in code.
-- [ ] Tests with other wallets like WalletConnect, Coinbase Wallet, Phantom, etc.
+- [ ] Test with other wallet providers (Coinbase Wallet, Phantom, etc.).
 - [ ] Improve E2E test reliability and coverage.
+- [ ] Add ENS name resolution for addresses in the UI.
+- [ ] Implement transaction history and filtering.
 
 ## References
 
 - [SafeSDK: Protocol Kit](https://docs.safe.global/sdk/protocol-kit)
 - [wagmi](https://wagmi.sh/)
 - [RainbowKit](https://www.rainbowkit.com/)
+- [WalletConnect](https://walletconnect.com/)
+- [React Router](https://reactrouter.com/)
 - [Synpress](https://docs.synpress.io/)
 - [Playwright](https://playwright.dev/)
 - [Foundry](https://getfoundry.sh/)
+- [Pinata](https://pinata.cloud/)
+- [IPFS](https://ipfs.tech/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [DaisyUI](https://daisyui.com/)
 

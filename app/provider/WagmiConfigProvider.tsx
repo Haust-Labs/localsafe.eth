@@ -16,8 +16,19 @@ import {
   RainbowKitProvider,
   lightTheme,
   darkTheme,
+  connectorsForWallets,
 } from "@rainbow-me/rainbowkit";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import {
+  metaMaskWallet,
+  rainbowWallet,
+  walletConnectWallet,
+  injectedWallet,
+  ledgerWallet,
+  oneKeyWallet,
+  rabbyWallet,
+  phantomWallet,
+} from "@rainbow-me/rainbowkit/wallets";
+import { createConfig, http } from "wagmi";
 import {
   mainnet,
   sepolia,
@@ -85,7 +96,7 @@ const DEFAULT_CHAINS: Chain[] = [
 export interface WagmiConfigContextType {
   configChains: Chain[];
   setConfigChains: React.Dispatch<React.SetStateAction<Chain[]>>;
-  wagmiConfig: ReturnType<typeof getDefaultConfig>;
+  wagmiConfig: ReturnType<typeof createConfig>;
 }
 
 const WagmiConfigContext = createContext<WagmiConfigContextType | undefined>(
@@ -137,10 +148,52 @@ export const WagmiConfigProvider: React.FC<{
   const wagmiConfig = useMemo(() => {
     if (!isMounted) return null;
 
-    return getDefaultConfig({
-      appName: "localsafe.eth",
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+    // Create transports object that uses wallet provider's RPC (EIP-1193)
+    // This ensures we use the user's wallet RPC instead of public RPC endpoints
+    const transports = configChains.reduce((acc, chain) => {
+      // http() with no URL uses the wallet's provider via window.ethereum (EIP-1193)
+      // Falls back to chain's default RPC only if wallet doesn't support the chain
+      acc[chain.id] = http();
+      return acc;
+    }, {} as Record<number, ReturnType<typeof http>>);
+
+    // Configure wallets explicitly to exclude Coinbase Wallet (which phones home)
+    const connectors = connectorsForWallets(
+      [
+        {
+          groupName: "Popular",
+          wallets: [
+            metaMaskWallet,
+            rabbyWallet,
+            rainbowWallet,
+            phantomWallet,
+          ],
+        },
+        {
+          groupName: "Hardware",
+          wallets: [
+            ledgerWallet,
+            oneKeyWallet,
+          ],
+        },
+        {
+          groupName: "More",
+          wallets: [
+            walletConnectWallet,
+            injectedWallet,
+          ],
+        },
+      ],
+      {
+        appName: "localsafe.eth",
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+      }
+    );
+
+    return createConfig({
       chains: configChains as [typeof mainnet, ...[typeof mainnet]],
+      connectors,
+      transports,
       ssr: false,
     });
   }, [configChains, isMounted]);
