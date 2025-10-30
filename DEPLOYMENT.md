@@ -51,6 +51,16 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
+#### Option 3: Manual Trigger
+
+1. Go to your repository on GitHub
+2. Click **Actions** → **Build and Deploy to IPFS**
+3. Click **Run workflow** dropdown
+4. Select the branch to deploy
+5. Click **Run workflow**
+
+This is useful for testing deployments or deploying without creating a release/tag.
+
 ### Accessing Your Deployment
 
 After deployment, you can access your app via:
@@ -64,7 +74,10 @@ The CID (Content Identifier) will be displayed in the GitHub Actions logs.
 ### Workflow Details
 
 - **Workflow file**: `.github/workflows/deploy-ipfs.yml`
-- **Trigger**: Release published or tag push (v*)
+- **Triggers**:
+  - Release published
+  - Tag push (v*)
+  - Manual workflow dispatch
 - **Build command**: `pnpm run build`
 - **Output directory**: `./out`
 - **Pin alias format**: `localsafe-<version>`
