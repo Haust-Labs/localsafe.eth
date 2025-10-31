@@ -10,11 +10,7 @@ import DataPreview from "@/app/components/DataPreview";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 
-export default function WalletConnectTxClient({
-  safeAddress,
-}: {
-  safeAddress: `0x${string}`;
-}) {
+export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   const navigate = useNavigate();
   const { chain } = useAccount();
   const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
@@ -67,14 +63,17 @@ export default function WalletConnectTxClient({
       }
 
       // Build the Safe transaction
-      const safeTx = await buildSafeTransaction([
-        {
-          to: txParams.to,
-          value: txParams.value || "0",
-          data: txParams.data || "0x",
-          operation: 0,
-        },
-      ], nonce);
+      const safeTx = await buildSafeTransaction(
+        [
+          {
+            to: txParams.to,
+            value: txParams.value || "0",
+            data: txParams.data || "0x",
+            operation: 0,
+          },
+        ],
+        nonce,
+      );
 
       if (!safeTx) {
         throw new Error("Failed to build Safe transaction");
@@ -120,7 +119,7 @@ export default function WalletConnectTxClient({
           code: 4001,
           message: "User rejected the request",
         },
-        currentRequest.id // Pass the request ID
+        currentRequest.id, // Pass the request ID
       );
       console.log("🔴 rejectRequest completed successfully");
     } catch (error) {
@@ -141,12 +140,9 @@ export default function WalletConnectTxClient({
     return (
       <AppSection>
         <AppCard title="WalletConnect Transaction">
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p>No pending transaction request found.</p>
-            <button
-              className="btn btn-primary mt-4"
-              onClick={() => navigate(`/safe/${safeAddress}`)}
-            >
+            <button className="btn btn-primary mt-4" onClick={() => navigate(`/safe/${safeAddress}`)}>
               Back to Safe
             </button>
           </div>
@@ -155,7 +151,8 @@ export default function WalletConnectTxClient({
     );
   }
 
-  const dappMetadata = (currentRequest.params as any)?.proposer?.metadata || (currentRequest.verifyContext as any)?.verified?.metadata;
+  const dappMetadata =
+    (currentRequest.params as any)?.proposer?.metadata || (currentRequest.verifyContext as any)?.verified?.metadata;
 
   return (
     <AppSection testid="wc-tx-section">
@@ -172,7 +169,7 @@ export default function WalletConnectTxClient({
                     code: 4001,
                     message: "User cancelled the request",
                   },
-                  currentRequest.id // Pass the request ID
+                  currentRequest.id, // Pass the request ID
                 );
                 console.log("🔴 Request rejected successfully");
               } catch (error) {
@@ -195,16 +192,12 @@ export default function WalletConnectTxClient({
           {/* dApp Info */}
           {dappMetadata && (
             <div className="bg-base-200 rounded-box p-4">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 {dappMetadata.icons?.[0] && (
-                  <img
-                    src={dappMetadata.icons[0]}
-                    alt={dappMetadata.name}
-                    className="w-12 h-12 rounded"
-                  />
+                  <img src={dappMetadata.icons[0]} alt={dappMetadata.name} className="h-12 w-12 rounded" />
                 )}
                 <div>
-                  <h4 className="font-bold text-lg">{dappMetadata.name}</h4>
+                  <h4 className="text-lg font-bold">{dappMetadata.name}</h4>
                   <p className="text-sm text-gray-500">{dappMetadata.url}</p>
                 </div>
               </div>
@@ -223,18 +216,12 @@ export default function WalletConnectTxClient({
 
             <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Value (wei)</span>
-              <span className="font-mono text-sm">
-                {txParams.value || "0"}
-              </span>
+              <span className="font-mono text-sm">{txParams.value || "0"}</span>
             </div>
 
             <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Value (ETH)</span>
-              <span>
-                {txParams.value
-                  ? formatEther(BigInt(txParams.value))
-                  : "0"}
-              </span>
+              <span>{txParams.value ? formatEther(BigInt(txParams.value)) : "0"}</span>
             </div>
 
             <div className="flex items-center justify-between px-4 py-3">
@@ -296,7 +283,7 @@ export default function WalletConnectTxClient({
 
           {/* Custom Nonce */}
           <div className="bg-base-200 rounded-box p-4">
-            <h5 className="font-semibold mb-2">Custom Nonce (optional)</h5>
+            <h5 className="mb-2 font-semibold">Custom Nonce (optional)</h5>
             <input
               type="number"
               className="input input-bordered w-full"
@@ -306,24 +293,18 @@ export default function WalletConnectTxClient({
               min="0"
               data-testid="wc-tx-nonce-input"
             />
-            <div className="text-sm text-gray-500 mt-1">
-              Current Safe nonce: {safeInfo?.nonce ?? "-"}
-            </div>
+            <div className="mt-1 text-sm text-gray-500">Current Safe nonce: {safeInfo?.nonce ?? "-"}</div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex gap-2">
             <button
               className="btn btn-error btn-outline flex-1"
               onClick={handleReject}
               disabled={isProcessing}
               data-testid="wc-tx-reject-btn"
             >
-              {isProcessing ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                "Reject"
-              )}
+              {isProcessing ? <span className="loading loading-spinner loading-sm"></span> : "Reject"}
             </button>
             <button
               className="btn btn-success flex-1"
@@ -343,14 +324,25 @@ export default function WalletConnectTxClient({
           </div>
 
           <div className="alert alert-warning">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 shrink-0 stroke-current"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
             <div className="flex flex-col">
               <span className="font-semibold">Safe Wallet Workflow</span>
               <span className="text-sm">
-                Clicking &quot;Create Safe Transaction&quot; will build a multi-sig transaction that requires signing and broadcasting.
-                The dApp request will be rejected since Safe transactions cannot provide an immediate transaction hash.
+                Clicking &quot;Create Safe Transaction&quot; will build a multi-sig transaction that requires signing
+                and broadcasting. The dApp request will be rejected since Safe transactions cannot provide an immediate
+                transaction hash.
               </span>
             </div>
           </div>

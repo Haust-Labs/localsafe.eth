@@ -1,24 +1,13 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Chain } from "wagmi/chains";
 import { WAGMI_CONFIG_NETWORKS_KEY } from "../utils/constants";
 import { WagmiProvider } from "wagmi";
 import { fallback, injected, unstable_connector } from "@wagmi/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@rainbow-me/rainbowkit/styles.css";
-import {
-  RainbowKitProvider,
-  lightTheme,
-  darkTheme,
-  connectorsForWallets,
-} from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, lightTheme, darkTheme, connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
   metaMaskWallet,
   rainbowWallet,
@@ -101,9 +90,7 @@ export interface WagmiConfigContextType {
   wagmiConfig: ReturnType<typeof createConfig>;
 }
 
-const WagmiConfigContext = createContext<WagmiConfigContextType | undefined>(
-  undefined,
-);
+const WagmiConfigContext = createContext<WagmiConfigContextType | undefined>(undefined);
 
 export const WagmiConfigProvider: React.FC<{
   children: React.ReactNode;
@@ -139,10 +126,7 @@ export const WagmiConfigProvider: React.FC<{
   // Save chains to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== "undefined" && chainsLoaded) {
-      localStorage.setItem(
-        WAGMI_CONFIG_NETWORKS_KEY,
-        JSON.stringify(configChains),
-      );
+      localStorage.setItem(WAGMI_CONFIG_NETWORKS_KEY, JSON.stringify(configChains));
     }
   }, [configChains, chainsLoaded]);
 
@@ -199,9 +183,7 @@ export const WagmiConfigProvider: React.FC<{
   }
 
   return (
-    <WagmiConfigContext.Provider
-      value={{ configChains, setConfigChains, wagmiConfig }}
-    >
+    <WagmiConfigContext.Provider value={{ configChains, setConfigChains, wagmiConfig }}>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider
@@ -226,9 +208,6 @@ export const WagmiConfigProvider: React.FC<{
 
 export function useWagmiConfigContext() {
   const ctx = useContext(WagmiConfigContext);
-  if (!ctx)
-    throw new Error(
-      "useWagmiConfigContext must be used within a WagmiConfigProvider",
-    );
+  if (!ctx) throw new Error("useWagmiConfigContext must be used within a WagmiConfigProvider");
   return ctx;
 }

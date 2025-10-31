@@ -13,17 +13,10 @@ interface AppSectionProps {
  * @param {string} [testid] - Optional test ID for testing purposes.
  * @returns A styled section component.
  */
-export default function AppSection({
-  children,
-  className,
-  testid,
-}: AppSectionProps) {
+export default function AppSection({ children, className, testid }: AppSectionProps) {
   return (
     <section
-      className={
-        "container mx-auto flex flex-col gap-8 p-10" +
-        (className ? " " + className : "")
-      }
+      className={"container mx-auto flex flex-col gap-8 p-10" + (className ? " " + className : "")}
       data-testid={testid || "app-section"}
     >
       {children}

@@ -14,11 +14,7 @@ interface AppAddressProps {
  * @param {string} [testid] - Optional test ID for testing purposes.
  * @returns A styled span element containing the blockchain address.
  */
-export default function AppAddress({
-  address,
-  className,
-  testid,
-}: AppAddressProps) {
+export default function AppAddress({ address, className, testid }: AppAddressProps) {
   return (
     <span
       className={

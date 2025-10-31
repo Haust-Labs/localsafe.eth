@@ -124,7 +124,7 @@ export async function fetchTokenPrice(
     const response = await fetch(url, {
       headers: {
         "x-cg-demo-api-key": apiKey,
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     });
 

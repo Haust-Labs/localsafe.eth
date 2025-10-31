@@ -36,8 +36,7 @@ export default function StepSigners({
 }: StepSignersProps) {
   // Validation logic
   const addressPattern = /^0x[a-fA-F0-9]{40}$/;
-  const allSignersValid =
-    signers.length > 0 && signers.every((addr) => addressPattern.test(addr));
+  const allSignersValid = signers.length > 0 && signers.every((addr) => addressPattern.test(addr));
   const lowerSigners = signers.map((addr) => addr.toLowerCase());
   const duplicateIndexes = lowerSigners
     .map((addr, idx, arr) => (arr.indexOf(addr) !== idx ? idx : -1))
@@ -52,11 +51,7 @@ export default function StepSigners({
   };
 
   const isNextDisabled =
-    signers.length === 0 ||
-    !allSignersValid ||
-    hasDuplicates ||
-    threshold <= 0 ||
-    threshold > signers.length;
+    signers.length === 0 || !allSignersValid || hasDuplicates || threshold <= 0 || threshold > signers.length;
 
   const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/^0+/, "");
@@ -69,19 +64,10 @@ export default function StepSigners({
       description="Here you will select the signers and set the threshold for your Safe account."
       actions={
         <>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onBack()}
-          >
+          <button type="button" className="btn btn-secondary" onClick={() => onBack()}>
             Back to Networks
           </button>
-          <button
-            type="button"
-            className="btn btn-primary rounded"
-            onClick={onNext}
-            disabled={isNextDisabled}
-          >
+          <button type="button" className="btn btn-primary rounded" onClick={onNext} disabled={isNextDisabled}>
             Next
           </button>
         </>
@@ -105,11 +91,7 @@ export default function StepSigners({
                 data-testid={`signer-input-${idx}`}
               />
               {signers.length > 1 && (
-                <button
-                  type="button"
-                  className="btn btn-outline btn-secondary"
-                  onClick={() => removeSignerField(idx)}
-                >
+                <button type="button" className="btn btn-outline btn-secondary" onClick={() => removeSignerField(idx)}>
                   -
                 </button>
               )}
@@ -141,13 +123,9 @@ export default function StepSigners({
             required
             data-testid="threshold-input"
           />
-          <p className="text-sm">
-            out of {signers.length} signers required to confirm a transaction
-          </p>
+          <p className="text-sm">out of {signers.length} signers required to confirm a transaction</p>
         </div>
-        <p className="validator-hint">
-          Threshold must be between 1 and {signers.length}
-        </p>
+        <p className="validator-hint">Threshold must be between 1 and {signers.length}</p>
       </fieldset>
     </StepLayout>
   );

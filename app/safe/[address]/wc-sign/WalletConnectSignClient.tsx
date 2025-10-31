@@ -8,11 +8,7 @@ import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import { useAccount, useSignMessage, useSignTypedData } from "wagmi";
 
-export default function WalletConnectSignClient({
-  safeAddress,
-}: {
-  safeAddress: `0x${string}`;
-}) {
+export default function WalletConnectSignClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   const navigate = useNavigate();
   const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { signSafeTransaction, kit } = useSafe(safeAddress);
@@ -76,9 +72,7 @@ export default function WalletConnectSignClient({
         case "eth_signTypedData_v4": {
           // signTypedData params: [address, typedData]
           const typedDataString = signParams[1];
-          messageToSign = typeof typedDataString === "string"
-            ? JSON.parse(typedDataString)
-            : typedDataString;
+          messageToSign = typeof typedDataString === "string" ? JSON.parse(typedDataString) : typedDataString;
           break;
         }
 
@@ -124,9 +118,10 @@ export default function WalletConnectSignClient({
 
       // Check if user rejected the request
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const isUserRejection = errorMessage.toLowerCase().includes('reject') ||
-                              errorMessage.toLowerCase().includes('denied') ||
-                              errorMessage.toLowerCase().includes('cancel');
+      const isUserRejection =
+        errorMessage.toLowerCase().includes("reject") ||
+        errorMessage.toLowerCase().includes("denied") ||
+        errorMessage.toLowerCase().includes("cancel");
 
       if (isUserRejection) {
         // User rejected - clean up and reject the WalletConnect request
@@ -137,7 +132,7 @@ export default function WalletConnectSignClient({
               code: 4001,
               message: "User rejected the signing request",
             },
-            currentRequest.id
+            currentRequest.id,
           );
         } catch (rejectError) {
           console.error("Failed to reject WalletConnect request:", rejectError);
@@ -172,7 +167,7 @@ export default function WalletConnectSignClient({
           code: 4001,
           message: "User rejected the request",
         },
-        currentRequest.id // Pass the request ID
+        currentRequest.id, // Pass the request ID
       );
     } catch (error) {
       console.error("Failed to reject signing:", error);
@@ -191,12 +186,9 @@ export default function WalletConnectSignClient({
     return (
       <AppSection>
         <AppCard title="WalletConnect Signing Request">
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p>No pending signing request found.</p>
-            <button
-              className="btn btn-primary mt-4"
-              onClick={() => navigate(`/safe/${safeAddress}`)}
-            >
+            <button className="btn btn-primary mt-4" onClick={() => navigate(`/safe/${safeAddress}`)}>
               Back to Safe
             </button>
           </div>
@@ -205,7 +197,8 @@ export default function WalletConnectSignClient({
     );
   }
 
-  const dappMetadata = (currentRequest.params as any)?.proposer?.metadata || (currentRequest.verifyContext as any)?.verified?.metadata;
+  const dappMetadata =
+    (currentRequest.params as any)?.proposer?.metadata || (currentRequest.verifyContext as any)?.verified?.metadata;
 
   // Format the message for display
   let messageToDisplay = "";
@@ -216,7 +209,12 @@ export default function WalletConnectSignClient({
       if (message.startsWith("0x")) {
         try {
           messageToDisplay = new TextDecoder().decode(
-            new Uint8Array(message.match(/.{1,2}/g).slice(1).map((byte: string) => parseInt(byte, 16)))
+            new Uint8Array(
+              message
+                .match(/.{1,2}/g)
+                .slice(1)
+                .map((byte: string) => parseInt(byte, 16)),
+            ),
           );
         } catch {
           messageToDisplay = message;
@@ -225,9 +223,7 @@ export default function WalletConnectSignClient({
         messageToDisplay = message;
       }
     } else if (method === "eth_signTypedData" || method === "eth_signTypedData_v4") {
-      const typedData = typeof signParams[1] === "string"
-        ? JSON.parse(signParams[1])
-        : signParams[1];
+      const typedData = typeof signParams[1] === "string" ? JSON.parse(signParams[1]) : signParams[1];
       messageToDisplay = JSON.stringify(typedData, null, 2);
     }
   } catch {
@@ -248,7 +244,7 @@ export default function WalletConnectSignClient({
                     code: 4001,
                     message: "User cancelled the request",
                   },
-                  currentRequest.id // Pass the request ID
+                  currentRequest.id, // Pass the request ID
                 );
               } catch (error) {
                 console.error("Failed to reject request:", error);
@@ -270,16 +266,12 @@ export default function WalletConnectSignClient({
           {/* dApp Info */}
           {dappMetadata && (
             <div className="bg-base-200 rounded-box p-4">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 {dappMetadata.icons?.[0] && (
-                  <img
-                    src={dappMetadata.icons[0]}
-                    alt={dappMetadata.name}
-                    className="w-12 h-12 rounded"
-                  />
+                  <img src={dappMetadata.icons[0]} alt={dappMetadata.name} className="h-12 w-12 rounded" />
                 )}
                 <div>
-                  <h4 className="font-bold text-lg">{dappMetadata.name}</h4>
+                  <h4 className="text-lg font-bold">{dappMetadata.name}</h4>
                   <p className="text-sm text-gray-500">{dappMetadata.url}</p>
                 </div>
               </div>
@@ -289,31 +281,27 @@ export default function WalletConnectSignClient({
 
           {/* Signing Method */}
           <div className="bg-base-200 rounded-box p-4">
-            <h5 className="font-semibold mb-2">Signing Method</h5>
+            <h5 className="mb-2 font-semibold">Signing Method</h5>
             <p className="font-mono text-sm">{method}</p>
           </div>
 
           {/* Message to Sign */}
           <div className="bg-base-200 rounded-box p-4">
-            <h5 className="font-semibold mb-2">Message</h5>
-            <pre className="whitespace-pre-wrap break-all text-sm bg-base-300 p-3 rounded max-h-64 overflow-y-auto">
+            <h5 className="mb-2 font-semibold">Message</h5>
+            <pre className="bg-base-300 max-h-64 overflow-y-auto rounded p-3 text-sm break-all whitespace-pre-wrap">
               {messageToDisplay}
             </pre>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex gap-2">
             <button
               className="btn btn-error btn-outline flex-1"
               onClick={handleReject}
               disabled={isProcessing}
               data-testid="wc-sign-reject-btn"
             >
-              {isProcessing ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                "Reject"
-              )}
+              {isProcessing ? <span className="loading loading-spinner loading-sm"></span> : "Reject"}
             </button>
             <button
               className="btn btn-success flex-1"
@@ -333,12 +321,20 @@ export default function WalletConnectSignClient({
           </div>
 
           <div className="alert alert-warning">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 shrink-0 stroke-current"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
-            <span>
-              Only sign messages you trust. Signing malicious messages can result in loss of funds.
-            </span>
+            <span>Only sign messages you trust. Signing malicious messages can result in loss of funds.</span>
           </div>
         </div>
       </AppCard>

@@ -33,7 +33,7 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
     success: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
+        className="h-6 w-6 shrink-0 stroke-current"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -48,7 +48,7 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
     error: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
+        className="h-6 w-6 shrink-0 stroke-current"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -63,7 +63,7 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
     warning: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
+        className="h-6 w-6 shrink-0 stroke-current"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -78,7 +78,7 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
     info: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
+        className="h-6 w-6 shrink-0 stroke-current"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -94,18 +94,14 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
 
   return (
     <div
-      className={`alert ${alertClass} shadow-lg mb-2 animate-slide-in`}
+      className={`alert ${alertClass} animate-slide-in mb-2 shadow-lg`}
       role="alert"
       aria-live="polite"
       aria-atomic="true"
     >
       {icon}
       <span>{message}</span>
-      <button
-        onClick={() => onClose(id)}
-        className="btn btn-sm btn-ghost btn-circle"
-        aria-label="Close"
-      >
+      <button onClick={() => onClose(id)} className="btn btn-sm btn-ghost btn-circle" aria-label="Close">
         ✕
       </button>
     </div>

@@ -107,7 +107,7 @@ export default function AdvancedSettingsClient() {
       if (KEYS_REQUIRING_RELOAD.includes(editingKey)) {
         const confirmed = await confirm(
           "Settings saved! The page will reload to apply changes. Continue?",
-          "Reload Required"
+          "Reload Required",
         );
         if (confirmed) {
           window.location.reload();
@@ -123,10 +123,7 @@ export default function AdvancedSettingsClient() {
   };
 
   const handleDelete = async (key: string) => {
-    const confirmed = await confirm(
-      `Are you sure you want to delete "${key}"?`,
-      "Delete Confirmation"
-    );
+    const confirmed = await confirm(`Are you sure you want to delete "${key}"?`, "Delete Confirmation");
     if (!confirmed) return;
 
     localStorage.removeItem(key);
@@ -165,7 +162,7 @@ export default function AdvancedSettingsClient() {
 
           const confirmed = await confirm(
             `This will overwrite ${Object.keys(data).length} localStorage items. Continue?`,
-            "Import Confirmation"
+            "Import Confirmation",
           );
           if (!confirmed) return;
 
@@ -188,13 +185,13 @@ export default function AdvancedSettingsClient() {
   const handleClearAll = async () => {
     const firstConfirm = await confirm(
       "Are you sure you want to clear ALL localStorage data? This cannot be undone!",
-      "Clear All Data"
+      "Clear All Data",
     );
     if (!firstConfirm) return;
 
     const secondConfirm = await confirm(
       "This will delete all your wallets, transactions, and settings. Are you ABSOLUTELY sure?",
-      "Final Warning"
+      "Final Warning",
     );
     if (!secondConfirm) return;
 
@@ -206,7 +203,7 @@ export default function AdvancedSettingsClient() {
   const filteredItems = storageItems.filter(
     (item) =>
       item.key.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      item.value.toLowerCase().includes(searchFilter.toLowerCase())
+      item.value.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
   return (
@@ -222,7 +219,7 @@ export default function AdvancedSettingsClient() {
           <div className="alert alert-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
+              className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
             >
@@ -236,8 +233,8 @@ export default function AdvancedSettingsClient() {
             <div>
               <h3 className="font-bold">Caution: Advanced Users Only</h3>
               <div className="text-sm">
-                Editing these values directly can break the application. Always export your data
-                before making changes. Some settings will automatically reload the page to apply changes.
+                Editing these values directly can break the application. Always export your data before making changes.
+                Some settings will automatically reload the page to apply changes.
               </div>
             </div>
           </div>
@@ -277,10 +274,8 @@ export default function AdvancedSettingsClient() {
                   <div className="card-body p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <h3 className="font-bold font-mono text-sm break-all">{item.key}</h3>
-                        {knownKey && (
-                          <p className="text-xs text-gray-500 mt-1">{knownKey.description}</p>
-                        )}
+                        <h3 className="font-mono text-sm font-bold break-all">{item.key}</h3>
+                        {knownKey && <p className="mt-1 text-xs text-gray-500">{knownKey.description}</p>}
                       </div>
                       <div className="flex gap-2">
                         {!isEditing ? (
@@ -291,10 +286,7 @@ export default function AdvancedSettingsClient() {
                             >
                               Edit
                             </button>
-                            <button
-                              className="btn btn-ghost btn-xs text-error"
-                              onClick={() => handleDelete(item.key)}
-                            >
+                            <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(item.key)}>
                               Delete
                             </button>
                           </>
@@ -320,21 +312,19 @@ export default function AdvancedSettingsClient() {
                     <div className="mt-2">
                       {isEditing ? (
                         <textarea
-                          className="textarea textarea-bordered w-full font-mono text-xs p-3 min-h-64"
+                          className="textarea textarea-bordered min-h-64 w-full p-3 font-mono text-xs"
                           rows={10}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                         />
                       ) : (
-                        <pre className="bg-base-300 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">
-                          {item.isValid
-                            ? JSON.stringify(item.parsed, null, 2)
-                            : item.value}
+                        <pre className="bg-base-300 max-h-64 overflow-x-auto overflow-y-auto rounded p-3 text-xs">
+                          {item.isValid ? JSON.stringify(item.parsed, null, 2) : item.value}
                         </pre>
                       )}
                     </div>
 
-                    <div className="text-xs text-gray-500 mt-2">
+                    <div className="mt-2 text-xs text-gray-500">
                       Size: {new Blob([item.value]).size} bytes
                       {item.isValid && " • Valid JSON"}
                     </div>
@@ -345,7 +335,7 @@ export default function AdvancedSettingsClient() {
           </div>
 
           {filteredItems.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="py-8 text-center text-gray-500">
               {searchFilter ? "No items match your search" : "No localStorage data found"}
             </div>
           )}

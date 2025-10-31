@@ -1,12 +1,4 @@
-import React, {
-  useEffect,
-  useRef,
-  useReducer,
-  useState,
-  memo,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useEffect, useRef, useReducer, useState, memo, useMemo, useCallback } from "react";
 import { FormAction, NetworkFormState } from "../utils/types";
 import { sanitizeUserInput } from "../utils/helpers";
 import { useChainManager } from "../hooks/useChainManager";
@@ -19,9 +11,7 @@ export interface NetworkFormProps {
   onCancel?: () => void;
 }
 
-export type NetworkFormErrors = Partial<
-  Record<keyof NetworkFormState, string>
-> & {
+export type NetworkFormErrors = Partial<Record<keyof NetworkFormState, string>> & {
   decimals?: string;
   symbol?: string;
 };
@@ -36,17 +26,9 @@ export type NetworkFormErrors = Partial<
  * @param {NetworkFormProps} props - The properties for the NetworkForm component.
  * @returns The NetworkForm component.
  */
-export default function NetworkForm({
-  setShowForm,
-  onSubmit,
-  initialState,
-  onCancel,
-}: NetworkFormProps) {
+export default function NetworkForm({ setShowForm, onSubmit, initialState, onCancel }: NetworkFormProps) {
   // useReducer for form state management
-  function formReducer(
-    state: NetworkFormState,
-    action: FormAction,
-  ): NetworkFormState {
+  function formReducer(state: NetworkFormState, action: FormAction): NetworkFormState {
     switch (action.type) {
       case "update":
         return { ...state, [action.key!]: action.value };
@@ -65,18 +47,13 @@ export default function NetworkForm({
     }
   }
 
-  const [state, dispatch] = useReducer(
-    formReducer,
-    initialState ?? NETWORK_FORM_DEFAULTS,
-  );
+  const [state, dispatch] = useReducer(formReducer, initialState ?? NETWORK_FORM_DEFAULTS);
   const [errors, setErrors] = useState<NetworkFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [loading, setLoading] = useState(false);
   const [rpcError, setRpcError] = useState<string>("");
   const { detectChain, detectedChain, detecting } = useChainManager();
-  const [suggested, setSuggested] = useState<Partial<NetworkFormState> | null>(
-    null,
-  );
+  const [suggested, setSuggested] = useState<Partial<NetworkFormState> | null>(null);
   // Debounce for RPC URL detection
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -161,50 +138,28 @@ export default function NetworkForm({
    * @param {string | number} value - The new value for the form field.
    * @returns void
    */
-  const handleChange = useCallback(
-    <K extends keyof NetworkFormState>(
-      key: K,
-      value: string | number,
-    ): void => {
-      const sanitized =
-        typeof value === "string" ? sanitizeUserInput(value) : value;
-      let error = "";
-      if (key === "id" && sanitized !== "" && isNaN(Number(sanitized))) {
-        error = "Chain ID must be a number";
-      }
-      if (
-        key === "name" &&
-        typeof sanitized === "string" &&
-        sanitized.length < 2
-      ) {
-        error = "Name must be at least 2 characters";
-      }
-      setErrors((prev) => ({ ...prev, [key]: error }));
-      dispatch({ type: "update", key, value: sanitized });
-    },
-    [],
-  );
+  const handleChange = useCallback(<K extends keyof NetworkFormState>(key: K, value: string | number): void => {
+    const sanitized = typeof value === "string" ? sanitizeUserInput(value) : value;
+    let error = "";
+    if (key === "id" && sanitized !== "" && isNaN(Number(sanitized))) {
+      error = "Chain ID must be a number";
+    }
+    if (key === "name" && typeof sanitized === "string" && sanitized.length < 2) {
+      error = "Name must be at least 2 characters";
+    }
+    setErrors((prev) => ({ ...prev, [key]: error }));
+    dispatch({ type: "update", key, value: sanitized });
+  }, []);
 
   // Handle changes to native currency fields with validation.
   const handleCurrencyChange = useCallback(
-    <K extends keyof NetworkFormState["nativeCurrency"]>(
-      key: K,
-      value: string | number,
-    ): void => {
-      const sanitized =
-        typeof value === "string" ? sanitizeUserInput(value) : value;
+    <K extends keyof NetworkFormState["nativeCurrency"]>(key: K, value: string | number): void => {
+      const sanitized = typeof value === "string" ? sanitizeUserInput(value) : value;
       let error = "";
-      if (
-        key === "symbol" &&
-        typeof sanitized === "string" &&
-        sanitized.length < 1
-      ) {
+      if (key === "symbol" && typeof sanitized === "string" && sanitized.length < 1) {
         error = "Symbol required";
       }
-      if (
-        key === "decimals" &&
-        (isNaN(Number(sanitized)) || Number(sanitized) < 0)
-      ) {
+      if (key === "decimals" && (isNaN(Number(sanitized)) || Number(sanitized) < 0)) {
         error = "Decimals must be a positive number";
       }
       setErrors((prev) => ({ ...prev, [key]: error }));
@@ -273,31 +228,17 @@ export default function NetworkForm({
       state.id !== "" &&
       !isNaN(Number(state.id))
     );
-  }, [
-    state.name,
-    state.rpcUrl,
-    state.nativeCurrency.symbol,
-    state.nativeCurrency.name,
-    state.id,
-  ]);
+  }, [state.name, state.rpcUrl, state.nativeCurrency.symbol, state.nativeCurrency.name, state.id]);
 
   // Extracted and memoized chain IDs for comparison
   const chainIdFromRpc = useMemo(() => {
-    return suggested?.id && Number(suggested?.id) !== 0
-      ? Number(suggested?.id)
-      : undefined;
+    return suggested?.id && Number(suggested?.id) !== 0 ? Number(suggested?.id) : undefined;
   }, [suggested]);
   const chainIdInput = useMemo(() => {
-    return !isNaN(Number(state.id)) && Number(state.id) !== 0
-      ? Number(state.id)
-      : undefined;
+    return !isNaN(Number(state.id)) && Number(state.id) !== 0 ? Number(state.id) : undefined;
   }, [state.id]);
   const chainIdMismatch = useMemo(() => {
-    return (
-      chainIdFromRpc !== undefined &&
-      chainIdInput !== undefined &&
-      chainIdFromRpc !== chainIdInput
-    );
+    return chainIdFromRpc !== undefined && chainIdInput !== undefined && chainIdFromRpc !== chainIdInput;
   }, [chainIdFromRpc, chainIdInput]);
 
   /**
@@ -327,12 +268,8 @@ export default function NetworkForm({
           onBlur={() => handleBlur("rpcUrl")}
           required
         />
-        {(loading || detecting) && (
-          <p className="mt-1 text-xs opacity-60">Detecting chain info...</p>
-        )}
-        {rpcError && touched.rpcUrl && (
-          <p className="text-error mt-1 text-xs">{rpcError}</p>
-        )}
+        {(loading || detecting) && <p className="mt-1 text-xs opacity-60">Detecting chain info...</p>}
+        {rpcError && touched.rpcUrl && <p className="text-error mt-1 text-xs">{rpcError}</p>}
       </fieldset>
       <div className="flex flex-wrap gap-4">
         <fieldset className="fieldset flex-1">
@@ -345,16 +282,10 @@ export default function NetworkForm({
             onBlur={() => handleBlur("name")}
             required
           />
-          {errors.name && touched.name && (
-            <p className="text-error mt-1 text-xs">{errors.name}</p>
-          )}
-          {suggested?.name && (
-            <Suggestion field="name" value={suggested.name} />
-          )}
+          {errors.name && touched.name && <p className="text-error mt-1 text-xs">{errors.name}</p>}
+          {suggested?.name && <Suggestion field="name" value={suggested.name} />}
         </fieldset>
-        <fieldset
-          className={`fieldset flex-1${chainIdMismatch ? "border-warning" : ""}`}
-        >
+        <fieldset className={`fieldset flex-1${chainIdMismatch ? "border-warning" : ""}`}>
           <legend className="fieldset-legend">Chain ID</legend>
           <input
             id="networkform-id"
@@ -364,13 +295,11 @@ export default function NetworkForm({
             onBlur={() => handleBlur("id")}
             required
           />
-          {errors.id && touched.id && (
-            <p className="text-error mt-1 text-xs">{errors.id}</p>
-          )}
+          {errors.id && touched.id && <p className="text-error mt-1 text-xs">{errors.id}</p>}
           {chainIdMismatch && (
             <p className="text-warning mt-1 text-xs">
-              Mismatch: RPC <span className="font-bold">{chainIdFromRpc}</span>{" "}
-              vs input <span className="font-bold">{chainIdInput}</span>
+              Mismatch: RPC <span className="font-bold">{chainIdFromRpc}</span> vs input{" "}
+              <span className="font-bold">{chainIdInput}</span>
             </p>
           )}
           {suggested?.id && <Suggestion field="id" value={suggested.id} />}
@@ -385,12 +314,7 @@ export default function NetworkForm({
           onChange={(e) => handleChange("blockExplorerUrl", e.target.value)}
           onBlur={() => handleBlur("blockExplorerUrl")}
         />
-        {suggested?.blockExplorerUrl && (
-          <Suggestion
-            field="blockExplorerUrl"
-            value={suggested.blockExplorerUrl}
-          />
-        )}
+        {suggested?.blockExplorerUrl && <Suggestion field="blockExplorerUrl" value={suggested.blockExplorerUrl} />}
       </fieldset>
       <fieldset className="fieldset">
         <legend className="fieldset-legend">Currency Name</legend>
@@ -402,11 +326,7 @@ export default function NetworkForm({
           onBlur={() => handleBlur("currencyName")}
         />
         {suggested?.nativeCurrency?.name && (
-          <Suggestion
-            field="name"
-            value={suggested.nativeCurrency.name}
-            isCurrency
-          />
+          <Suggestion field="name" value={suggested.nativeCurrency.name} isCurrency />
         )}
       </fieldset>
       <div className="flex gap-4">
@@ -420,15 +340,9 @@ export default function NetworkForm({
             onChange={(e) => handleCurrencyChange("decimals", e.target.value)}
             onBlur={() => handleBlur("decimals")}
           />
-          {errors.decimals && touched.decimals && (
-            <p className="text-error mt-1 text-xs">{errors.decimals}</p>
-          )}
+          {errors.decimals && touched.decimals && <p className="text-error mt-1 text-xs">{errors.decimals}</p>}
           {suggested?.nativeCurrency?.decimals && (
-            <Suggestion
-              field="decimals"
-              value={suggested.nativeCurrency.decimals}
-              isCurrency
-            />
+            <Suggestion field="decimals" value={suggested.nativeCurrency.decimals} isCurrency />
           )}
         </fieldset>
         <fieldset className="fieldset">
@@ -440,26 +354,18 @@ export default function NetworkForm({
             onChange={(e) => handleCurrencyChange("symbol", e.target.value)}
             onBlur={() => handleBlur("symbol")}
           />
-          {errors.symbol && touched.symbol && (
-            <p className="text-error mt-1 text-xs">{errors.symbol}</p>
-          )}
+          {errors.symbol && touched.symbol && <p className="text-error mt-1 text-xs">{errors.symbol}</p>}
           {suggested?.nativeCurrency?.symbol && (
-            <Suggestion
-              field="symbol"
-              value={suggested.nativeCurrency.symbol}
-              isCurrency
-            />
+            <Suggestion field="symbol" value={suggested.nativeCurrency.symbol} isCurrency />
           )}
         </fieldset>
       </div>
 
       {/* Advanced Settings - MultiSend Configuration */}
-      <details className="collapse collapse-arrow bg-base-200">
-        <summary className="collapse-title text-sm font-medium">
-          Advanced Settings (Optional)
-        </summary>
+      <details className="collapse-arrow bg-base-200 collapse">
+        <summary className="collapse-title text-sm font-medium">Advanced Settings (Optional)</summary>
         <div className="collapse-content space-y-4">
-          <p className="text-xs text-gray-400 mb-2">
+          <p className="mb-2 text-xs text-gray-400">
             Configure MultiSend contract addresses for transaction batching. Leave empty to use Safe SDK defaults.
           </p>
           <fieldset className="fieldset">
@@ -472,9 +378,7 @@ export default function NetworkForm({
               placeholder="0x... (optional)"
             />
             <label className="label">
-              <span className="label-text-alt">
-                Used for batching multiple transactions together
-              </span>
+              <span className="label-text-alt">Used for batching multiple transactions together</span>
             </label>
           </fieldset>
           <fieldset className="fieldset">
@@ -487,9 +391,7 @@ export default function NetworkForm({
               placeholder="0x... (optional)"
             />
             <label className="label">
-              <span className="label-text-alt">
-                Used for call-only (no delegatecall) batched transactions
-              </span>
+              <span className="label-text-alt">Used for call-only (no delegatecall) batched transactions</span>
             </label>
           </fieldset>
         </div>
@@ -497,11 +399,7 @@ export default function NetworkForm({
 
       <div className="mt-4 flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-4">
-          <button
-            type="submit"
-            className="btn btn-primary btn-sm"
-            disabled={!isFormComplete || !!chainIdMismatch}
-          >
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!isFormComplete || !!chainIdMismatch}>
             Save
           </button>
           <button

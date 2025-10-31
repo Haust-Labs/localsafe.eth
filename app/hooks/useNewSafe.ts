@@ -2,11 +2,7 @@
 
 import { useCallback } from "react";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
-import {
-  getMinimalEIP1193Provider,
-  createPredictionConfig,
-  createConnectionConfig,
-} from "../utils/helpers";
+import { getMinimalEIP1193Provider, createPredictionConfig, createConnectionConfig } from "../utils/helpers";
 import { SafeDeployStep, PendingSafeStatus, PayMethod } from "../utils/types";
 import { waitForTransactionReceipt } from "viem/actions";
 import { Chain, zeroAddress } from "viem";
@@ -149,9 +145,7 @@ export default function useNewSafe() {
             // Store deployed safe in addressBook only
             addSafe(String(chain.id), safeAddress, safeName);
           } else {
-            const chainContracts = contractNetworks
-              ? contractNetworks[String(chain.id)]
-              : {};
+            const chainContracts = contractNetworks ? contractNetworks[String(chain.id)] : {};
             addSafe(String(chain.id), safeAddress, safeName, {
               props: {
                 factoryAddress: chainContracts?.safeProxyFactoryAddress || "",
@@ -192,9 +186,7 @@ export default function useNewSafe() {
     async (
       safeAddress: `0x${string}`,
       chainId: number,
-    ): Promise<
-      { owners: string[]; threshold: number } | { error: string } | null
-    > => {
+    ): Promise<{ owners: string[]; threshold: number } | { error: string } | null> => {
       try {
         if (!connector || !signer || !chainId) {
           return { error: "Missing wallet connector, signer, or chainId." };
@@ -206,21 +198,14 @@ export default function useNewSafe() {
             error: "Could not get EIP-1193 provider for selected network.",
           };
         }
-        const config = createConnectionConfig(
-          provider,
-          signer,
-          safeAddress,
-          contractNetworks,
-        );
+        const config = createConnectionConfig(provider, signer, safeAddress, contractNetworks);
         // Initialize Safe SDK
         let kit;
         try {
           kit = await Safe.init(config);
         } catch (err) {
           return {
-            error:
-              "Failed to initialize Safe SDK: " +
-              (err instanceof Error ? err.message : String(err)),
+            error: "Failed to initialize Safe SDK: " + (err instanceof Error ? err.message : String(err)),
           };
         }
         let deployed;
@@ -228,9 +213,7 @@ export default function useNewSafe() {
           deployed = await kit.isSafeDeployed();
         } catch (err) {
           return {
-            error:
-              "Failed to check Safe deployment: " +
-              (err instanceof Error ? err.message : String(err)),
+            error: "Failed to check Safe deployment: " + (err instanceof Error ? err.message : String(err)),
           };
         }
         if (!deployed) {
@@ -243,17 +226,13 @@ export default function useNewSafe() {
           threshold = await kit.getThreshold();
         } catch (err) {
           return {
-            error:
-              "Failed to fetch Safe owners/threshold: " +
-              (err instanceof Error ? err.message : String(err)),
+            error: "Failed to fetch Safe owners/threshold: " + (err instanceof Error ? err.message : String(err)),
           };
         }
         return { owners, threshold };
       } catch (err) {
         return {
-          error:
-            "Unexpected error: " +
-            (err instanceof Error ? err.message : String(err)),
+          error: "Unexpected error: " + (err instanceof Error ? err.message : String(err)),
         };
       }
     },

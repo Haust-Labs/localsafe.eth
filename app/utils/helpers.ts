@@ -1,10 +1,6 @@
 // Helper functions for SafeProvider
 import { Connector } from "wagmi";
-import {
-  MinimalEIP1193Provider,
-  SafeConfigConnection,
-  SafeConfigPrediction,
-} from "./types";
+import { MinimalEIP1193Provider, SafeConfigConnection, SafeConfigPrediction } from "./types";
 import { ContractNetworks } from "./contractNetworks";
 import { ADJECTIVES, NOUNS } from "./constants";
 

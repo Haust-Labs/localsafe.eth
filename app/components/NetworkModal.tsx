@@ -90,11 +90,11 @@ export default function NetworkModal({
       rpcUrls: { default: { http: [state.rpcUrl] } },
       blockExplorers: state.blockExplorerUrl
         ? {
-          default: {
-            name: state.blockExplorerName || "Explorer",
-            url: state.blockExplorerUrl,
-          },
-        }
+            default: {
+              name: state.blockExplorerName || "Explorer",
+              url: state.blockExplorerUrl,
+            },
+          }
         : undefined,
       nativeCurrency: state.nativeCurrency,
       contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
@@ -103,12 +103,7 @@ export default function NetworkModal({
   }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      showCloseButton={false}
-      testid="network-modal"
-    >
+    <Modal open={open} onClose={onClose} showCloseButton={false} testid="network-modal">
       <h2 className="mb-4 text-2xl font-bold">Manage Networks</h2>
       {showForm ? (
         <NetworkForm
@@ -120,18 +115,14 @@ export default function NetworkModal({
       ) : (
         <>
           <p>
-            Here you can manage your custom networks. You can add or remove
-            custom networks as needed.
+            Here you can manage your custom networks. You can add or remove custom networks as needed.
             <br />
             <span className="text-xs text-gray-400 italic">
-              Note: Adding a new network will take over any previously set
-              custom network with the same Chain ID.
+              Note: Adding a new network will take over any previously set custom network with the same Chain ID.
             </span>
           </p>
           <ul className="list bg-base-100 rounded-box max-h-64 overflow-y-auto shadow-md">
-            <li className="p-4 pb-2 text-xs tracking-wide opacity-60">
-              Your configured networks
-            </li>
+            <li className="p-4 pb-2 text-xs tracking-wide opacity-60">Your configured networks</li>
             {/* Conditional rendering of configured networks */}
             {configChains.length > 0 ? (
               configChains.map((chain) => {
@@ -144,9 +135,7 @@ export default function NetworkModal({
                     </div>
                     <div>
                       <div>{chain.name}</div>
-                      <div className="text-xs font-semibold uppercase opacity-60">
-                        Chain ID: {chain.id}
-                      </div>
+                      <div className="text-xs font-semibold uppercase opacity-60">Chain ID: {chain.id}</div>
                     </div>
                     {/* Edit network button */}
                     <div className="flex items-center gap-2">
@@ -158,14 +147,14 @@ export default function NetworkModal({
                             id: chain.id,
                             name: chain.name,
                             rpcUrl: chain.rpcUrls?.default?.http?.[0] || "",
-                            blockExplorerUrl:
-                              chain.blockExplorers?.default?.url || "",
-                            blockExplorerName:
-                              chain.blockExplorers?.default?.name || "",
+                            blockExplorerUrl: chain.blockExplorers?.default?.url || "",
+                            blockExplorerName: chain.blockExplorers?.default?.name || "",
                             multiSendAddress:
-                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSend?.address || "",
+                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSend
+                                ?.address || "",
                             multiSendCallOnlyAddress:
-                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSendCallOnly?.address || "",
+                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSendCallOnly
+                                ?.address || "",
                             nativeCurrency: chain.nativeCurrency || {
                               name: "",
                               symbol: "",
@@ -180,11 +169,7 @@ export default function NetworkModal({
                       {/* Remove network button with tooltip if only one chain remains */}
                       <div
                         className="tooltip tooltip-left"
-                        data-tip={
-                          configChains.length === 1
-                            ? "One chain is required"
-                            : undefined
-                        }
+                        data-tip={configChains.length === 1 ? "One chain is required" : undefined}
                       >
                         <button
                           className="btn btn-square btn-ghost"
@@ -200,9 +185,7 @@ export default function NetworkModal({
                 );
               })
             ) : (
-              <li className="p-4 text-center text-sm opacity-60">
-                No custom networks added.
-              </li>
+              <li className="p-4 text-center text-sm opacity-60">No custom networks added.</li>
             )}
           </ul>
           {/* Add and Close buttons */}

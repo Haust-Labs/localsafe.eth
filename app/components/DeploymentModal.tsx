@@ -35,38 +35,20 @@ export default function DeploymentModal({
 }: DeploymentModalProps) {
   if (!open) return null;
   return (
-    <dialog
-      id="workflow_modal"
-      className="modal modal-bottom sm:modal-middle"
-      open
-      data-testid="deployment-modal-root"
-    >
-      <div
-        className="modal-box flex !max-w-3xl flex-col gap-6 p-8"
-        data-testid="deployment-modal-box"
-      >
-        <h3
-          className="mb-4 text-lg font-bold"
-          data-testid="deployment-modal-title"
-        >
+    <dialog id="workflow_modal" className="modal modal-bottom sm:modal-middle" open data-testid="deployment-modal-root">
+      <div className="modal-box flex !max-w-3xl flex-col gap-6 p-8" data-testid="deployment-modal-box">
+        <h3 className="mb-4 text-lg font-bold" data-testid="deployment-modal-title">
           Workflow Progress
         </h3>
         <div className="mb-4" data-testid="deployment-modal-steps">
-          <ul
-            className="steps w-full"
-            data-testid="deployment-modal-steps-list"
-          >
+          <ul className="steps w-full" data-testid="deployment-modal-steps-list">
             {steps.map((step: { step: string; status: string }) => {
               let stepClass = "step ";
               if (step.status === "running") stepClass += "step-primary";
               else if (step.status === "success") stepClass += "step-success";
               else if (step.status === "error") stepClass += "step-error";
               return (
-                <li
-                  key={step.step}
-                  className={stepClass}
-                  data-testid={`deployment-modal-step-${step.step}`}
-                >
+                <li key={step.step} className={stepClass} data-testid={`deployment-modal-step-${step.step}`}>
                   {step.status === "running" ? (
                     <span
                       className="loading loading-spinner loading-xs"
@@ -81,8 +63,7 @@ export default function DeploymentModal({
           {txHash && (
             <div className="mt-4">
               <span className="font-semibold">Transaction Hash:</span>
-              {selectedNetwork &&
-              selectedNetwork.blockExplorers?.default?.url ? (
+              {selectedNetwork && selectedNetwork.blockExplorers?.default?.url ? (
                 <a
                   href={`${selectedNetwork.blockExplorers.default.url}/tx/${encodeURIComponent(txHash)}`}
                   target="_blank"
@@ -90,18 +71,10 @@ export default function DeploymentModal({
                   className="link link-primary ml-2"
                   data-testid="deployment-modal-txhash-link"
                 >
-                  <AppAddress
-                    address={txHash}
-                    className="text-xs"
-                    testid="deployment-modal-txhash"
-                  />
+                  <AppAddress address={txHash} className="text-xs" testid="deployment-modal-txhash" />
                 </a>
               ) : (
-                <AppAddress
-                  address={txHash}
-                  className="ml-2 text-xs"
-                  testid="deployment-modal-txhash"
-                />
+                <AppAddress address={txHash} className="ml-2 text-xs" testid="deployment-modal-txhash" />
               )}
             </div>
           )}
@@ -114,10 +87,7 @@ export default function DeploymentModal({
             </div>
           )}
         </div>
-        <div
-          className="flex justify-center gap-4"
-          data-testid="deployment-modal-actions"
-        >
+        <div className="flex justify-center gap-4" data-testid="deployment-modal-actions">
           {onSuccess && successLabel && !error ? (
             <button
               type="button"

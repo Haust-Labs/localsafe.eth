@@ -136,7 +136,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet]
+    [web3wallet],
   );
 
   const approveSession = useCallback(
@@ -163,7 +163,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet, pendingProposal]
+    [web3wallet, pendingProposal],
   );
 
   const rejectSession = useCallback(async () => {
@@ -212,7 +212,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet]
+    [web3wallet],
   );
 
   const approveRequest = useCallback(
@@ -241,7 +241,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet, pendingRequest]
+    [web3wallet, pendingRequest],
   );
 
   const rejectRequest = useCallback(
@@ -282,7 +282,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet, pendingRequest]
+    [web3wallet, pendingRequest],
   );
 
   const clearPendingRequest = useCallback(() => {

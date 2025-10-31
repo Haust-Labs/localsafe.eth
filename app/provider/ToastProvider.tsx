@@ -45,33 +45,24 @@ export default function ToastProvider({ children }: ToastProviderProps) {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const addToast = useCallback(
-    (type: ToastType, message: string, duration?: number) => {
-      const id = `toast-${Date.now()}-${Math.random()}`;
-      setToasts((prev) => [...prev, { id, type, message, duration }]);
-    },
-    []
-  );
+  const addToast = useCallback((type: ToastType, message: string, duration?: number) => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, type, message, duration }]);
+  }, []);
 
   const success = useCallback(
     (message: string, duration?: number) => addToast("success", message, duration),
-    [addToast]
+    [addToast],
   );
 
-  const error = useCallback(
-    (message: string, duration?: number) => addToast("error", message, duration),
-    [addToast]
-  );
+  const error = useCallback((message: string, duration?: number) => addToast("error", message, duration), [addToast]);
 
   const warning = useCallback(
     (message: string, duration?: number) => addToast("warning", message, duration),
-    [addToast]
+    [addToast],
   );
 
-  const info = useCallback(
-    (message: string, duration?: number) => addToast("info", message, duration),
-    [addToast]
-  );
+  const info = useCallback((message: string, duration?: number) => addToast("info", message, duration), [addToast]);
 
   const confirm = useCallback((message: string, title?: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -101,13 +92,13 @@ export default function ToastProvider({ children }: ToastProviderProps) {
     if (!confirmState.isOpen) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         handleConfirm(false);
       }
     };
 
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
   }, [confirmState.isOpen, handleConfirm]);
 
   return (
@@ -126,21 +117,17 @@ export default function ToastProvider({ children }: ToastProviderProps) {
               aria-labelledby="modal-title"
               aria-describedby="modal-description"
             >
-              <h3 id="modal-title" className="font-bold text-lg">
+              <h3 id="modal-title" className="text-lg font-bold">
                 {confirmState.title || "Confirm"}
               </h3>
-              <p id="modal-description" className="py-4">{confirmState.message}</p>
+              <p id="modal-description" className="py-4">
+                {confirmState.message}
+              </p>
               <div className="modal-action">
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => handleConfirm(false)}
-                >
+                <button className="btn btn-ghost" onClick={() => handleConfirm(false)}>
                   Cancel
                 </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleConfirm(true)}
-                >
+                <button className="btn btn-primary" onClick={() => handleConfirm(true)}>
                   Confirm
                 </button>
               </div>

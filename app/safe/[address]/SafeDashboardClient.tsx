@@ -4,10 +4,7 @@ import AppAddress from "@/app/components/AppAddress";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import useSafe from "@/app/hooks/useSafe";
-import {
-  DEFAULT_DEPLOY_STEPS,
-  STEPS_DEPLOY_LABEL,
-} from "@/app/utils/constants";
+import { DEFAULT_DEPLOY_STEPS, STEPS_DEPLOY_LABEL } from "@/app/utils/constants";
 import React, { useEffect, useState, useRef } from "react";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -30,11 +27,7 @@ import { useToast, useConfirm } from "@/app/hooks/useToast";
  * @param param0 - The props object containing the safe address.
  * @returns {JSX.Element} The rendered SafeDashboardClient component.
  */
-export default function SafeDashboardClient({
-  safeAddress,
-}: {
-  safeAddress: `0x${string}`;
-}) {
+export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   // Try to get the name from addressBook for the current chain
   const { chain, address: connectedAddress } = useAccount();
   const navigate = useNavigate();
@@ -52,7 +45,7 @@ export default function SafeDashboardClient({
     createBatchedOwnerManagementTransaction,
   } = useSafe(safeAddress);
   // Hooks
-  const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction} = useSafeTxContext();
+  const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction } = useSafeTxContext();
   const { setSafeMultiSendConfig, getSafeMultiSendConfig } = useSafeWalletContext();
   const toast = useToast();
   const { confirm } = useConfirm();
@@ -61,16 +54,13 @@ export default function SafeDashboardClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [manageOwnersModalOpen, setManageOwnersModalOpen] = useState(false);
   const [multiSendModalOpen, setMultiSendModalOpen] = useState(false);
-  const [deploySteps, setDeploySteps] =
-    useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
+  const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
   const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importPreview, setImportPreview] = useState<
-    ImportTxPreview | { error: string } | null
-  >(null);
+  const [importPreview, setImportPreview] = useState<ImportTxPreview | { error: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle shared transaction or signature links
@@ -96,7 +86,9 @@ export default function SafeDashboardClient({
             const newUrl = window.location.pathname;
             window.history.replaceState({}, "", newUrl);
             // Show success message
-            toast.success(`Transaction imported successfully!${urlChainId && chain?.id && String(chain.id) !== urlChainId ? ` (Chain ID: ${urlChainId})` : ''}`);
+            toast.success(
+              `Transaction imported successfully!${urlChainId && chain?.id && String(chain.id) !== urlChainId ? ` (Chain ID: ${urlChainId})` : ""}`,
+            );
           }
         } catch (e) {
           console.error("Failed to import transaction from URL:", e);
@@ -129,7 +121,7 @@ export default function SafeDashboardClient({
               const ethSignature = new EthSafeSignature(
                 parsed.signature.signer,
                 parsed.signature.data,
-                parsed.signature.isContractSignature
+                parsed.signature.isContractSignature,
               );
               matchingTx.addSignature(ethSignature);
               saveTransaction(safeAddress, matchingTx);
@@ -169,7 +161,7 @@ export default function SafeDashboardClient({
             transactions.map(async (tx) => ({
               tx,
               hash: await safeKit.getTransactionHash(tx),
-            }))
+            })),
           );
 
           if (!cancelled) {
@@ -210,11 +202,7 @@ export default function SafeDashboardClient({
       // If any step failed, set error and keep modal open
       if (steps.some((s) => s.status === "error")) {
         const errorStep = steps.find((s) => s.status === "error");
-        setDeployError(
-          errorStep && errorStep.error
-            ? `Deployment error: ${errorStep.error}`
-            : "Deployment error",
-        );
+        setDeployError(errorStep && errorStep.error ? `Deployment error: ${errorStep.error}` : "Deployment error");
         return;
       }
     } catch {
@@ -228,15 +216,8 @@ export default function SafeDashboardClient({
     setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
   }
 
-  function isDeploySuccess(
-    deploySteps: SafeDeployStep[],
-    deployTxHash: string | null,
-  ) {
-    return (
-      deploySteps.length > 0 &&
-      deploySteps.every((s) => s.status === "success") &&
-      !!deployTxHash
-    );
+  function isDeploySuccess(deploySteps: SafeDeployStep[], deployTxHash: string | null) {
+    return deploySteps.length > 0 && deploySteps.every((s) => s.status === "success") && !!deployTxHash;
   }
 
   // Handler to go to builder page
@@ -245,14 +226,8 @@ export default function SafeDashboardClient({
   }
 
   // Utility to handle Safe transaction import and state update
-  async function handleImportTx(
-    importPreview: ImportTxPreview | { error: string } | null,
-  ) {
-    if (
-      typeof importPreview === "object" &&
-      importPreview !== null &&
-      !("error" in importPreview)
-    ) {
+  async function handleImportTx(importPreview: ImportTxPreview | { error: string } | null) {
+    if (typeof importPreview === "object" && importPreview !== null && !("error" in importPreview)) {
       try {
         const chainId = chain?.id ? String(chain.id) : undefined;
         importTx(safeAddress, JSON.stringify(importPreview), chainId);
@@ -270,7 +245,7 @@ export default function SafeDashboardClient({
     newThreshold: number,
   ) {
     // Cast addresses to Address type for the hook
-    const typedChanges = changes.map(c => ({
+    const typedChanges = changes.map((c) => ({
       type: c.type,
       address: c.address as `0x${string}`,
     }));
@@ -281,9 +256,7 @@ export default function SafeDashboardClient({
   }
 
   // Get current MultiSend config for this Safe
-  const currentMultiSendConfig = chain?.id
-    ? getSafeMultiSendConfig(String(chain.id), safeAddress)
-    : undefined;
+  const currentMultiSendConfig = chain?.id ? getSafeMultiSendConfig(String(chain.id), safeAddress) : undefined;
 
   // Handle MultiSend config save
   function handleSaveMultiSendConfig(multiSend?: string, multiSendCallOnly?: string) {
@@ -296,7 +269,7 @@ export default function SafeDashboardClient({
   async function handleDeleteTransaction(txHash: string, nonce: number) {
     const confirmed = await confirm(
       "Are you sure you want to delete this transaction? This action cannot be undone.",
-      "Delete Transaction"
+      "Delete Transaction",
     );
 
     if (confirmed) {
@@ -340,10 +313,7 @@ export default function SafeDashboardClient({
       </div>
       <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:grid-rows-2">
         {/* Safe Info fills left column, spans two rows */}
-        <AppCard
-          title="Safe Info"
-          className="md:col-start-1 md:row-span-2 md:row-start-1"
-        >
+        <AppCard title="Safe Info" className="md:col-start-1 md:row-span-2 md:row-start-1">
           <div className="mb-2" data-testid="safe-dashboard-address-row">
             <span className="font-semibold">Address:</span>
             <AppAddress address={safeAddress} className="ml-2" />
@@ -369,16 +339,10 @@ export default function SafeDashboardClient({
           {/* Manage Owners Button */}
           {safeInfo && safeInfo.deployed && isOwner && !unavailable && (
             <div className="mt-4 flex flex-col gap-2">
-              <button
-                className="btn btn-outline btn-sm w-full"
-                onClick={() => setManageOwnersModalOpen(true)}
-              >
+              <button className="btn btn-outline btn-sm w-full" onClick={() => setManageOwnersModalOpen(true)}>
                 Manage Owners & Threshold
               </button>
-              <button
-                className="btn btn-outline btn-sm w-full"
-                onClick={() => setMultiSendModalOpen(true)}
-              >
+              <button className="btn btn-outline btn-sm w-full" onClick={() => setMultiSendModalOpen(true)}>
                 Configure MultiSend
               </button>
             </div>
@@ -388,22 +352,13 @@ export default function SafeDashboardClient({
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
             {/* Transaction import button */}
-            <div
-              className="mb-2 flex gap-2"
-              data-testid="safe-dashboard-actions-row"
-            >
+            <div className="mb-2 flex gap-2" data-testid="safe-dashboard-actions-row">
               <button
                 className="btn btn-secondary btn-outline btn-sm w-full"
                 data-testid="safe-dashboard-import-tx-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import transaction JSON from file"
-                disabled={
-                  unavailable ||
-                  !isOwner ||
-                  !safeInfo?.deployed ||
-                  !!error ||
-                  isLoading
-                }
+                disabled={unavailable || !isOwner || !safeInfo?.deployed || !!error || isLoading}
               >
                 Import Transaction
               </button>
@@ -445,56 +400,36 @@ export default function SafeDashboardClient({
             )}
             {error && <div className="alert alert-error">{error}</div>}
             {unavailable && (
-              <div className="alert alert-warning mb-4">
-                This Safe is not available on the selected network.
-              </div>
+              <div className="alert alert-warning mb-4">This Safe is not available on the selected network.</div>
             )}
             {safeInfo && !safeInfo.deployed && !unavailable && (
               <>
                 <div className="alert alert-warning mb-4">
-                  This Safe is not deployed yet. You can deploy it now to start
-                  using multi-signature features.
+                  This Safe is not deployed yet. You can deploy it now to start using multi-signature features.
                 </div>
                 {isOwner ? (
-                  <button
-                    className="btn btn-primary w-full"
-                    onClick={handleDeployUndeployedSafe}
-                  >
+                  <button className="btn btn-primary w-full" onClick={handleDeployUndeployedSafe}>
                     Deploy Safe
                   </button>
                 ) : (
-                  <div className="alert alert-info">
-                    Read-only: Only owners can deploy.
-                  </div>
+                  <div className="alert alert-info">Read-only: Only owners can deploy.</div>
                 )}
               </>
             )}
-            {safeInfo &&
-              safeInfo.deployed &&
-              isOwner &&
-              !isLoading &&
-              !error &&
-              !unavailable && (
-                <>
-                  <button
-                    className="btn btn-outline btn-primary"
-                    onClick={handleGoToBuilder}
-                    data-testid="safe-dashboard-go-to-builder-btn"
-                  >
-                    Build New Transaction
-                  </button>
-                </>
-              )}
-            {safeInfo &&
-              safeInfo.deployed &&
-              !isOwner &&
-              !isLoading &&
-              !error &&
-              !unavailable && (
-                <div className="alert alert-info">
-                  Read-only: Only owners can perform actions.
-                </div>
-              )}
+            {safeInfo && safeInfo.deployed && isOwner && !isLoading && !error && !unavailable && (
+              <>
+                <button
+                  className="btn btn-outline btn-primary"
+                  onClick={handleGoToBuilder}
+                  data-testid="safe-dashboard-go-to-builder-btn"
+                >
+                  Build New Transaction
+                </button>
+              </>
+            )}
+            {safeInfo && safeInfo.deployed && !isOwner && !isLoading && !error && !unavailable && (
+              <div className="alert alert-info">Read-only: Only owners can perform actions.</div>
+            )}
             {/* If no safeInfo, show a message */}
             {!safeInfo && !isLoading && !error && !unavailable && (
               <div className="alert alert-info">
@@ -514,13 +449,10 @@ export default function SafeDashboardClient({
         </AppCard>
         {/* Current Transactions Queue in bottom right cell */}
         {allTxs.length > 0 && (
-          <AppCard
-            title="Current Transactions"
-            testid="safe-dashboard-current-tx-card"
-          >
+          <AppCard title="Current Transactions" testid="safe-dashboard-current-tx-card">
             <div className="flex flex-col gap-2">
               {allTxs.map(({ tx, hash }) => (
-                <div key={hash} className="flex gap-2 items-center">
+                <div key={hash} className="flex items-center gap-2">
                   <Link
                     className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
                     data-testid={`safe-dashboard-current-tx-link-${hash}`}
@@ -581,10 +513,7 @@ export default function SafeDashboardClient({
 
       {/* Token Balances Section */}
       {safeInfo && safeInfo.deployed && !unavailable && chain?.id && (
-        <TokenBalancesSection
-          safeAddress={safeAddress}
-          chainId={chain.id}
-        />
+        <TokenBalancesSection safeAddress={safeAddress} chainId={chain.id} />
       )}
 
       {/* Modal for deployment workflow */}
@@ -597,14 +526,8 @@ export default function SafeDashboardClient({
         selectedNetwork={chain}
         onClose={handleCloseModal}
         closeLabel="Close"
-        successLabel={
-          isDeploySuccess(deploySteps, deployTxHash) ? "Go to Safe" : undefined
-        }
-        onSuccess={
-          isDeploySuccess(deploySteps, deployTxHash)
-            ? handleCloseModal
-            : undefined
-        }
+        successLabel={isDeploySuccess(deploySteps, deployTxHash) ? "Go to Safe" : undefined}
+        onSuccess={isDeploySuccess(deploySteps, deployTxHash) ? handleCloseModal : undefined}
       />
       {/* Import Modal with preview and confirmation */}
       <ImportSafeTxModal

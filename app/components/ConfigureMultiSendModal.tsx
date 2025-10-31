@@ -44,10 +44,7 @@ export default function ConfigureMultiSendModal({
       return;
     }
 
-    onSave(
-      multiSendAddress || undefined,
-      multiSendCallOnlyAddress || undefined
-    );
+    onSave(multiSendAddress || undefined, multiSendCallOnlyAddress || undefined);
     onClose();
   };
 
@@ -61,12 +58,9 @@ export default function ConfigureMultiSendModal({
   return (
     <div className="modal modal-open">
       <div className="modal-box">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-lg">Configure MultiSend (Safe Override)</h3>
-          <button
-            className="btn btn-ghost btn-sm btn-circle"
-            onClick={onClose}
-          >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">Configure MultiSend (Safe Override)</h3>
+          <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}>
             ✕
           </button>
         </div>
@@ -76,7 +70,7 @@ export default function ConfigureMultiSendModal({
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            className="stroke-current shrink-0 w-6 h-6"
+            className="h-6 w-6 shrink-0 stroke-current"
           >
             <path
               strokeLinecap="round"
@@ -87,7 +81,10 @@ export default function ConfigureMultiSendModal({
           </svg>
           <div className="text-sm">
             <p className="font-semibold">Safe-Level Override</p>
-            <p>These addresses override the network-level configuration for this Safe only. Leave empty to use network defaults.</p>
+            <p>
+              These addresses override the network-level configuration for this Safe only. Leave empty to use network
+              defaults.
+            </p>
           </div>
         </div>
 
@@ -104,9 +101,7 @@ export default function ConfigureMultiSendModal({
               onChange={(e) => setMultiSendAddress(e.target.value)}
             />
             <label className="label">
-              <span className="label-text-alt">
-                Used for batching multiple transactions together
-              </span>
+              <span className="label-text-alt">Used for batching multiple transactions together</span>
             </label>
           </div>
 
@@ -122,9 +117,7 @@ export default function ConfigureMultiSendModal({
               onChange={(e) => setMultiSendCallOnlyAddress(e.target.value)}
             />
             <label className="label">
-              <span className="label-text-alt">
-                Used for call-only (no delegatecall) batched transactions
-              </span>
+              <span className="label-text-alt">Used for call-only (no delegatecall) batched transactions</span>
             </label>
           </div>
 
@@ -137,7 +130,7 @@ export default function ConfigureMultiSendModal({
           <div className="alert alert-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
+              className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
             >
@@ -150,28 +143,21 @@ export default function ConfigureMultiSendModal({
             </svg>
             <div className="text-sm">
               <p className="font-semibold">Warning</p>
-              <p>Only set these if you know what you&apos;re doing. Invalid addresses will prevent transaction batching.</p>
+              <p>
+                Only set these if you know what you&apos;re doing. Invalid addresses will prevent transaction batching.
+              </p>
             </div>
           </div>
         </div>
 
         <div className="modal-action">
-          <button
-            className="btn btn-ghost"
-            onClick={handleClear}
-          >
+          <button className="btn btn-ghost" onClick={handleClear}>
             Clear All
           </button>
-          <button
-            className="btn btn-ghost"
-            onClick={onClose}
-          >
+          <button className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSave}
-          >
+          <button className="btn btn-primary" onClick={handleSave}>
             Save Configuration
           </button>
         </div>

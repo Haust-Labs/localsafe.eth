@@ -39,11 +39,7 @@ export default function StepNameAndNetworks({
 }: StepNameAndNetworksProps) {
   function toggleChain(chain: Chain) {
     const exists = selectedChains.some((c) => c.id === chain.id);
-    setSelectedChains(
-      exists
-        ? selectedChains.filter((c) => c.id !== chain.id)
-        : [...selectedChains, chain],
-    );
+    setSelectedChains(exists ? selectedChains.filter((c) => c.id !== chain.id) : [...selectedChains, chain]);
   }
 
   return (
@@ -51,12 +47,7 @@ export default function StepNameAndNetworks({
       title="Safe Name & Networks"
       description="Enter a name for your Safe and select the networks to deploy on. Both will be registered."
       actions={
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={selectedChains.length === 0}
-          onClick={onNext}
-        >
+        <button type="button" className="btn btn-primary" disabled={selectedChains.length === 0} onClick={onNext}>
           Next
         </button>
       }
@@ -75,17 +66,12 @@ export default function StepNameAndNetworks({
           />
         </div>
         <label className="label">
-          <span className="label-text-alt">
-            If left blank, a random name will be generated.
-          </span>
+          <span className="label-text-alt">If left blank, a random name will be generated.</span>
         </label>
       </fieldset>
       <fieldset className="fieldset col-span-2">
         <legend className="fieldset-legend">Networks</legend>
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(e) => e.preventDefault()}
-        >
+        <form className="flex flex-wrap gap-2" onSubmit={(e) => e.preventDefault()}>
           <input
             className="btn btn-square btn-sm"
             type="reset"

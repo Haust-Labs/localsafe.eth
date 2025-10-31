@@ -49,10 +49,7 @@ export type ContractNetworks = {
   [chainId: string]: ContractAddresses;
 };
 
-export async function buildContractNetworks(
-  chainIds: number[],
-  safeVersion = "1.4.1",
-): Promise<ContractNetworks> {
+export async function buildContractNetworks(chainIds: number[], safeVersion = "1.4.1"): Promise<ContractNetworks> {
   const contractNetworks: ContractNetworks = {};
   for (const chainId of chainIds) {
     if (chainId === 31337) {
@@ -103,9 +100,7 @@ export async function buildContractNetworks(
     } catch {
       // If Safe 1.4.1 is not available, display error and skip this chain
       // TODO: In future, support dynamic Safe version fallback
-      console.error(
-        `Safe contracts for version 1.4.1 not found on chain ${chainId}. Skipping.`,
-      );
+      console.error(`Safe contracts for version 1.4.1 not found on chain ${chainId}. Skipping.`);
       continue;
     }
   }

@@ -4,9 +4,7 @@ import { AbiFunctionItem } from "./types";
 /**
  * Result of encoding calldata from ABI
  */
-export type EncodeCalldataResult =
-  | { success: true; data: string }
-  | { success: false; error: string };
+export type EncodeCalldataResult = { success: true; data: string } | { success: false; error: string };
 
 /**
  * Encodes function call data from ABI and input values
@@ -38,9 +36,7 @@ export function encodeCalldataFromAbi(
     const abi: AbiFunctionItem[] = JSON.parse(abiJson);
 
     // Find the method in ABI
-    const method = abi.find(
-      (item) => item.type === "function" && item.name === methodName,
-    );
+    const method = abi.find((item) => item.type === "function" && item.name === methodName);
 
     if (!method || !method.inputs) {
       return { success: false, error: `Method "${methodName}" not found in ABI` };

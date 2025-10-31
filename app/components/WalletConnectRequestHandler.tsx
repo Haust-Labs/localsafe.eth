@@ -122,7 +122,7 @@ export default function WalletConnectRequestHandler() {
                 code: 4001,
                 message: "User navigated away from request page",
               },
-              pendingRequest.id // Pass the request ID
+              pendingRequest.id, // Pass the request ID
             );
             console.log("🟠 Auto-rejection sent successfully");
           } catch (error) {

@@ -40,16 +40,9 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
 }) => {
   if (!open) return null;
   return (
-    <dialog
-      id="broadcast_modal"
-      className="modal modal-bottom sm:modal-middle"
-      open
-      data-testid={testid}
-    >
+    <dialog id="broadcast_modal" className="modal modal-bottom sm:modal-middle" open data-testid={testid}>
       <div className="modal-box flex !max-w-2xl flex-col gap-6 p-8">
-        <div className="text-base-content font-bold">
-          Broadcasting transaction
-        </div>
+        <div className="text-base-content font-bold">Broadcasting transaction</div>
 
         <div className="mb-4">
           {txHash && (
@@ -66,11 +59,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
                   <AppAddress address={txHash} className="text-xs" />
                 </a>
               ) : (
-                <AppAddress
-                  address={txHash}
-                  className="ml-2 text-xs"
-                  testid="broadcast-modal-txhash"
-                />
+                <AppAddress address={txHash} className="ml-2 text-xs" testid="broadcast-modal-txhash" />
               )}
             </div>
           )}
@@ -83,10 +72,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
             </div>
           )}
         </div>
-        <div
-          className="flex justify-center gap-4"
-          data-testid="broadcast-modal-actions"
-        >
+        <div className="flex justify-center gap-4" data-testid="broadcast-modal-actions">
           {onSuccess && successLabel && !error ? (
             <button
               type="button"

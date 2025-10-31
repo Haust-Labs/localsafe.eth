@@ -173,13 +173,9 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-lg">WalletConnect</h3>
-          <button
-            className="btn btn-ghost btn-sm btn-circle"
-            onClick={onClose}
-            data-testid="wc-modal-close-btn"
-          >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">WalletConnect</h3>
+          <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose} data-testid="wc-modal-close-btn">
             ✕
           </button>
         </div>
@@ -188,14 +184,9 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
           <>
             <div className="alert alert-warning mb-4">
               <span>
-                No WalletConnect Project ID is configured. You can use the default shared project ID
-                or get your own from{" "}
-                <a
-                  href="https://cloud.walletconnect.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link"
-                >
+                No WalletConnect Project ID is configured. You can use the default shared project ID or get your own
+                from{" "}
+                <a href="https://cloud.walletconnect.com" target="_blank" rel="noopener noreferrer" className="link">
                   WalletConnect Cloud
                 </a>
               </span>
@@ -218,11 +209,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                 </label>
               </div>
               <div className="modal-action">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={onClose}
-                >
+                <button type="button" className="btn btn-ghost" onClick={onClose}>
                   Cancel
                 </button>
                 <button
@@ -242,7 +229,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
               <button
                 role="tab"
                 type="button"
-                className={`tab gap-2 flex-1 ${activeTab === 0 ? "tab-active" : ""}`}
+                className={`tab flex-1 gap-2 ${activeTab === 0 ? "tab-active" : ""}`}
                 onClick={() => setActiveTab(0)}
                 data-testid="wc-connect-tab"
               >
@@ -251,28 +238,22 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
               <button
                 role="tab"
                 type="button"
-                className={`tab gap-2 flex-1 ${activeTab === 1 ? "tab-active" : ""}`}
+                className={`tab flex-1 gap-2 ${activeTab === 1 ? "tab-active" : ""}`}
                 onClick={() => setActiveTab(1)}
                 data-testid="wc-proposals-tab"
               >
                 Proposals
-                {pendingProposal && (
-                  <div className="badge badge-error badge-sm">1</div>
-                )}
+                {pendingProposal && <div className="badge badge-error badge-sm">1</div>}
               </button>
               <button
                 role="tab"
                 type="button"
-                className={`tab gap-2 flex-1 ${activeTab === 2 ? "tab-active" : ""}`}
+                className={`tab flex-1 gap-2 ${activeTab === 2 ? "tab-active" : ""}`}
                 onClick={() => setActiveTab(2)}
                 data-testid="wc-sessions-tab"
               >
                 Sessions
-                {sessions.length > 0 && (
-                  <div className="badge badge-primary badge-sm">
-                    {sessions.length}
-                  </div>
-                )}
+                {sessions.length > 0 && <div className="badge badge-primary badge-sm">{sessions.length}</div>}
               </button>
             </div>
 
@@ -280,9 +261,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
               {/* Connect Tab */}
               {activeTab === 0 && (
                 <div data-testid="wc-connect-panel">
-                  <p className="mb-4">
-                    Paste the pairing code below to connect to your Safe via WalletConnect
-                  </p>
+                  <p className="mb-4">Paste the pairing code below to connect to your Safe via WalletConnect</p>
                   <div className="form-control">
                     <label className="label">
                       <span className="label-text">Pairing code</span>
@@ -296,11 +275,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                         placeholder="wc:your-link-here"
                         data-testid="wc-pairing-code-input"
                       />
-                      <button
-                        className="btn btn-success join-item"
-                        onClick={handlePaste}
-                        data-testid="wc-paste-btn"
-                      >
+                      <button className="btn btn-success join-item" onClick={handlePaste} data-testid="wc-paste-btn">
                         Paste
                       </button>
                     </div>
@@ -310,9 +285,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                       <span>{error.message}</span>
                     </div>
                   )}
-                  <p className="mt-4 text-sm text-gray-500">
-                    No dApps are connected yet.
-                  </p>
+                  <p className="mt-4 text-sm text-gray-500">No dApps are connected yet.</p>
                 </div>
               )}
 
@@ -322,51 +295,45 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                   {pendingProposal ? (
                     <div className="space-y-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 bg-primary rounded-lg mb-4 flex items-center justify-center">
+                        <div className="bg-primary mb-4 flex h-16 w-16 items-center justify-center rounded-lg">
                           {(pendingProposal as any).proposer?.metadata?.icons?.[0] ? (
                             <img
                               src={(pendingProposal as any).proposer.metadata.icons[0]}
                               alt={(pendingProposal as any).proposer.metadata.name}
-                              className="w-full h-full rounded-lg"
+                              className="h-full w-full rounded-lg"
                             />
                           ) : (
                             <span className="text-2xl">🔗</span>
                           )}
                         </div>
-                        <h4 className="font-bold text-xl mb-2">
+                        <h4 className="mb-2 text-xl font-bold">
                           {(pendingProposal as any).proposer?.metadata?.name || "Unknown dApp"} wants to connect
                         </h4>
-                        <p className="text-center mb-2">
-                          {(pendingProposal as any).proposer?.metadata?.url || ""}
-                        </p>
-                        <p className="text-sm text-gray-500 text-center mb-4">
+                        <p className="mb-2 text-center">{(pendingProposal as any).proposer?.metadata?.url || ""}</p>
+                        <p className="mb-4 text-center text-sm text-gray-500">
                           {(pendingProposal as any).proposer?.metadata?.description || ""}
                         </p>
                       </div>
 
                       {!safeAddress && (
                         <div className="alert alert-info">
-                          <span>
-                            Please navigate to a Safe before approving this connection
-                          </span>
+                          <span>Please navigate to a Safe before approving this connection</span>
                         </div>
                       )}
 
                       <div className="bg-base-200 rounded-box p-4">
-                        <h5 className="font-semibold mb-2">Requested Permissions:</h5>
+                        <h5 className="mb-2 font-semibold">Requested Permissions:</h5>
                         {Object.entries((pendingProposal as any).requiredNamespaces || {}).map(
                           ([namespace, details]: [string, any]) => (
                             <div key={namespace} className="mb-2">
                               <p className="font-medium">{namespace}:</p>
                               <div className="pl-4 text-sm">
-                                {details.chains && (
-                                  <p>Chains: {details.chains.join(", ")}</p>
-                                )}
+                                {details.chains && <p>Chains: {details.chains.join(", ")}</p>}
                                 <p>Methods: {details.methods.join(", ")}</p>
                                 <p>Events: {details.events.join(", ")}</p>
                               </div>
                             </div>
-                          )
+                          ),
                         )}
                       </div>
                     </div>
@@ -394,16 +361,12 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                                   <img
                                     src={session.peer.metadata.icons[0]}
                                     alt={session.peer.metadata.name}
-                                    className="w-10 h-10 rounded"
+                                    className="h-10 w-10 rounded"
                                   />
                                 )}
                                 <div>
-                                  <h4 className="font-semibold">
-                                    {session.peer.metadata.name}
-                                  </h4>
-                                  <p className="text-sm text-gray-500">
-                                    {session.peer.metadata.url}
-                                  </p>
+                                  <h4 className="font-semibold">{session.peer.metadata.name}</h4>
+                                  <p className="text-sm text-gray-500">{session.peer.metadata.url}</p>
                                 </div>
                               </div>
                               <button

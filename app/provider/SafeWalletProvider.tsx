@@ -15,27 +15,15 @@ import type { SafeWalletData, UndeployedSafe } from "../utils/types";
 import { buildContractNetworks } from "../utils/contractNetworks";
 import type { ContractNetworks } from "../utils/contractNetworks";
 import { useChains } from "wagmi";
-import {
-  DEFAULT_SAFE_WALLET_DATA,
-  SAFE_WALLET_DATA_KEY,
-} from "../utils/constants";
+import { DEFAULT_SAFE_WALLET_DATA, SAFE_WALLET_DATA_KEY } from "../utils/constants";
 
 // -- Interfaces and Context --
 export interface SafeWalletContextType {
   safeWalletData: SafeWalletData;
   setSafeWalletData: React.Dispatch<React.SetStateAction<SafeWalletData>>;
   contractNetworks: ContractNetworks | undefined;
-  addSafe: (
-    chainId: string,
-    safeAddress: string,
-    safeName: string,
-    safeConfig?: UndeployedSafe,
-  ) => void;
-  removeSafe: (
-    chainId: string,
-    safeAddress: string,
-    deployed?: boolean,
-  ) => void;
+  addSafe: (chainId: string, safeAddress: string, safeName: string, safeConfig?: UndeployedSafe) => void;
+  removeSafe: (chainId: string, safeAddress: string, deployed?: boolean) => void;
   setSafeMultiSendConfig: (
     chainId: string,
     safeAddress: string,
@@ -48,21 +36,15 @@ export interface SafeWalletContextType {
   ) => { multiSendAddress?: string; multiSendCallOnlyAddress?: string } | undefined;
 }
 
-export const SafeWalletContext = createContext<
-  SafeWalletContextType | undefined
->(undefined);
+export const SafeWalletContext = createContext<SafeWalletContextType | undefined>(undefined);
 
 // -- Provider Component --
 
-export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Wagmi hooks (if needed for actions)
   const chains = useChains();
 
-  const [contractNetworks, setContractNetworks] = useState<
-    ContractNetworks | undefined
-  >();
+  const [contractNetworks, setContractNetworks] = useState<ContractNetworks | undefined>();
 
   const [safeWalletData, setSafeWalletData] = useState<SafeWalletData>(() => ({
     ...DEFAULT_SAFE_WALLET_DATA,
@@ -87,10 +69,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (loaded) {
-      localStorage.setItem(
-        SAFE_WALLET_DATA_KEY,
-        JSON.stringify(safeWalletData),
-      );
+      localStorage.setItem(SAFE_WALLET_DATA_KEY, JSON.stringify(safeWalletData));
     }
   }, [safeWalletData, loaded]);
   // Build contractNetworks whenever chains change
@@ -101,12 +80,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
       .catch(() => setContractNetworks(undefined));
   }, [chains]);
 
-  const addSafe = (
-    chainId: string,
-    safeAddress: string,
-    safeName: string,
-    safeConfig?: UndeployedSafe,
-  ) => {
+  const addSafe = (chainId: string, safeAddress: string, safeName: string, safeConfig?: UndeployedSafe) => {
     setSafeWalletData((prev) => {
       const data = { ...prev.data };
       if (safeConfig) {
@@ -121,11 +95,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const removeSafe = (
-    chainId: string,
-    safeAddress: string,
-    deployed = false,
-  ) => {
+  const removeSafe = (chainId: string, safeAddress: string, deployed = false) => {
     setSafeWalletData((prev) => {
       const data = { ...prev.data };
       if (deployed) {
@@ -193,9 +163,6 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export function useSafeWalletContext() {
   const ctx = useContext(SafeWalletContext);
-  if (!ctx)
-    throw new Error(
-      "useSafeWalletContext must be used within a SafeWalletProvider",
-    );
+  if (!ctx) throw new Error("useSafeWalletContext must be used within a SafeWalletProvider");
   return ctx;
 }

@@ -12,9 +12,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <WagmiConfigProvider>
           <SafeWalletProvider>
             <SafeTxProvider>
-              <WalletConnectProvider>
-                {children}
-              </WalletConnectProvider>
+              <WalletConnectProvider>{children}</WalletConnectProvider>
             </SafeTxProvider>
           </SafeWalletProvider>
         </WagmiConfigProvider>
