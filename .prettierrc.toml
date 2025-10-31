@@ -1,9 +1,11 @@
 tabWidth = 2
 semi = true
 trailingComma = "all"
-printWidth = 80
+printWidth = 120
 singleQuote = false
 jsxSingleQuote = false
 bracketSpacing = true
 endOfLine = "lf"
-plugins = ["prettier-plugin-tailwindcss"]
+plugins = [
+    "prettier-plugin-tailwindcss",
+]
