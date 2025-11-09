@@ -151,8 +151,7 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kit, chain, txHash, safeAddress, getAllTransactions]);
+  }, [kit, chain, txHash, safeAddress, getAllTransactions, toast]);
 
   /**
    * Calculate EIP-712 hashes when transaction is loaded

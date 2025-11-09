@@ -30,7 +30,7 @@ export interface WalletConnectContextType {
   pendingProposal: ProposalTypes.Struct | null;
   pendingRequest: SignClientTypes.EventArguments["session_request"] | null;
   pair: (uri: string) => Promise<void>;
-  approveSession: (namespaces: Record<string, NamespaceConfig>) => Promise<void>;
+  approveSession: (namespaces: Record<string, any>, safeAddress: string, chainId: number) => Promise<void>;
   rejectSession: () => Promise<void>;
   disconnectSession: (topic: string) => Promise<void>;
   approveRequest: (topic: string, response: WalletConnectResponse) => Promise<void>;
@@ -116,7 +116,53 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           setError(null);
         });
 
-        wallet.on("session_request", (request: SignClientTypes.EventArguments["session_request"]) => {
+        wallet.on("session_request", async (request: any) => {
+          const { topic, params } = request;
+          const { request: rpcRequest } = params;
+
+          // Auto-respond to wallet_getCapabilities (EIP-5792)
+          if (rpcRequest.method === "wallet_getCapabilities") {
+            try {
+              // const walletAddress = rpcRequest.params?.[0];
+              const sessions = wallet.getActiveSessions();
+              const session = Object.values(sessions).find((s) => s.topic === topic);
+
+              if (session) {
+                // Extract safe address and chain from session accounts
+                // Format: "eip155:1:0x..."
+                const accounts = Object.values(session.namespaces)[0]?.accounts || [];
+                const firstAccount = accounts[0];
+                if (firstAccount) {
+                  const [, chainIdStr] = firstAccount.split(":");
+                  const chainIdNum = parseInt(chainIdStr);
+
+                  // Return capabilities for this Safe on this chain
+                  const capabilities = {
+                    [`0x${chainIdNum.toString(16)}`]: {
+                      atomicBatch: {
+                        supported: true,
+                      },
+                    },
+                  };
+
+                  await wallet.respondSessionRequest({
+                    topic,
+                    response: {
+                      id: rpcRequest.id,
+                      jsonrpc: "2.0",
+                      result: capabilities,
+                    },
+                  });
+
+                  return;
+                }
+              }
+            } catch (err) {
+              console.error("Failed to respond to wallet_getCapabilities:", err);
+            }
+          }
+
+          // For all other requests, show to user
           setPendingRequest(request);
         });
 
@@ -155,14 +201,29 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const approveSession = useCallback(
-    async (namespaces: Record<string, NamespaceConfig>) => {
+    async (namespaces: Record<string, any>, safeAddress: string, chainId: number) => {
       if (!web3wallet || !pendingProposal) {
         throw new Error("No pending proposal");
       }
       try {
+        // Build session properties with EIP-5792 capabilities
+        // This tells dApps that this is a Smart Contract Wallet supporting EIP-1271 verification
+        const sessionProperties = {
+          capabilities: JSON.stringify({
+            [safeAddress]: {
+              [`0x${Number(chainId).toString(16)}`]: {
+                atomicBatch: {
+                  supported: true,
+                },
+              },
+            },
+          }),
+        };
+
         await web3wallet.approveSession({
           id: pendingProposal.id,
           namespaces,
+          sessionProperties,
         });
 
         // Update sessions
@@ -230,9 +291,9 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const approveRequest = useCallback(
-    async (topic: string, response: WalletConnectResponse) => {
-      if (!web3wallet || !pendingRequest) {
-        throw new Error("No pending request");
+    async (topic: string, response: any) => {
+      if (!web3wallet) {
+        throw new Error("WalletConnect not initialized");
       }
       try {
         await web3wallet.respondSessionRequest({
@@ -248,7 +309,7 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    [web3wallet, pendingRequest],
+    [web3wallet],
   );
 
   const rejectRequest = useCallback(
@@ -264,15 +325,13 @@ export const WalletConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       try {
-        const response: WalletConnectResponse = {
-          id,
-          jsonrpc: "2.0",
-          error,
-        };
-
         await web3wallet.respondSessionRequest({
           topic,
-          response,
+          response: {
+            id,
+            jsonrpc: "2.0",
+            error,
+          },
         });
 
         setPendingRequest(null);

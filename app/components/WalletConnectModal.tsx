@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWalletConnect } from "../provider/WalletConnectProvider";
 import { useAccount } from "wagmi";
 import { useParams } from "react-router-dom";
@@ -10,10 +10,39 @@ type WalletConnectModalProps = {
   onClose: () => void;
 };
 
+type NamespaceValue = {
+  chains?: string[];
+  methods?: string[];
+  events?: string[];
+};
+
+type Namespace = {
+  accounts: string[];
+  methods: string[];
+  events: string[];
+  chains: string[];
+};
+
+type ProposalMetadata = {
+  name?: string;
+  icons?: string[];
+  url?: string;
+  description?: string;
+};
+
+type ProposalType = {
+  requiredNamespaces?: Record<string, NamespaceValue>;
+  optionalNamespaces?: Record<string, NamespaceValue>;
+  proposer?: {
+    metadata?: ProposalMetadata;
+  };
+};
+
 export default function WalletConnectModal({ open, onClose }: WalletConnectModalProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [pairingCode, setPairingCode] = useState("");
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const pairingInputRef = useRef<HTMLInputElement>(null);
   const params = useParams<{ address: string }>();
   const safeAddress = params.address;
   const { chain } = useAccount();
@@ -35,14 +64,28 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
   useEffect(() => {
     if (open) {
       setPairingCode("");
+      // Auto-focus Connect tab if no sessions exist
+      if (sessions.length === 0 && activeTab !== 0) {
+        setActiveTab(0);
+      }
     }
-  }, [open]);
+  }, [open, sessions.length]);
 
   useEffect(() => {
     if (pendingProposal && activeTab !== 1) {
       setActiveTab(1);
     }
   }, [pendingProposal, activeTab]);
+
+  // Auto-focus pairing input when Connect tab is active
+  useEffect(() => {
+    if (open && activeTab === 0) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        pairingInputRef.current?.focus();
+      }, 100);
+    }
+  }, [open, activeTab]);
 
   const handleSubmit = async () => {
     if (pairingCode.trim() !== "") {
@@ -69,28 +112,18 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
     }
 
     try {
-      const proposal = pendingProposal;
+      const proposal = pendingProposal as ProposalType;
 
-      const requiredNamespaces = (proposal as { params?: { requiredNamespaces?: Record<string, unknown> } })?.params
-        ?.requiredNamespaces || {};
-      const optionalNamespaces = (proposal as { params?: { optionalNamespaces?: Record<string, unknown> } })?.params
-        ?.optionalNamespaces || {};
+      const requiredNamespaces = proposal.requiredNamespaces || {};
+      const optionalNamespaces = proposal.optionalNamespaces || {};
 
-      interface NamespaceConfig {
-        accounts: string[];
-        methods: string[];
-        events: string[];
-        chains: string[];
-      }
-
-      const namespaces: Record<string, NamespaceConfig> = {};
+      const namespaces: Record<string, Namespace> = {};
 
       // Process required namespaces
-      Object.entries(requiredNamespaces).forEach(([key, value]) => {
-        const namespaceValue = value as { chains?: string[]; methods?: string[]; events?: string[] };
-        const chains = namespaceValue.chains || [];
-        const methods = namespaceValue.methods || [];
-        const events = namespaceValue.events || [];
+      Object.entries(requiredNamespaces).forEach(([key, value]: [string, NamespaceValue]) => {
+        const chains = value.chains || [];
+        const methods = value.methods || [];
+        const events = value.events || [];
 
         // Build accounts array - ensure proper format
         const accounts = chains.map((chainId: string) => `${chainId}:${safeAddress}`);
@@ -131,7 +164,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
         }
       });
 
-      await approveSession(namespaces);
+      await approveSession(namespaces, safeAddress, chain.id);
     } catch (e) {
       console.error("Failed to approve session:", e);
       alert(`Failed to approve session: ${e instanceof Error ? e.message : String(e)}`);
@@ -271,6 +304,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                     </label>
                     <div className="join w-full">
                       <input
+                        ref={pairingInputRef}
                         type="text"
                         className="input input-bordered join-item flex-1"
                         value={pairingCode}
@@ -299,10 +333,10 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                     <div className="space-y-4">
                       <div className="flex flex-col items-center">
                         <div className="bg-primary mb-4 flex h-16 w-16 items-center justify-center rounded-lg">
-                          {(pendingProposal as unknown as { params?: { proposer?: { metadata?: { icons?: string[]; name?: string } } } })?.params?.proposer?.metadata?.icons?.[0] ? (
+                          {(pendingProposal as ProposalType).proposer?.metadata?.icons?.[0] ? (
                             <img
-                              src={(pendingProposal as unknown as { params?: { proposer?: { metadata?: { icons?: string[] } } } })?.params?.proposer?.metadata?.icons![0]}
-                              alt={(pendingProposal as unknown as { params?: { proposer?: { metadata?: { name?: string } } } })?.params?.proposer?.metadata?.name || "dApp"}
+                              src={(pendingProposal as ProposalType).proposer?.metadata?.icons?.[0] || ""}
+                              alt={(pendingProposal as ProposalType).proposer?.metadata?.name || "dApp"}
                               className="h-full w-full rounded-lg"
                             />
                           ) : (
@@ -310,11 +344,11 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
                           )}
                         </div>
                         <h4 className="mb-2 text-xl font-bold">
-                          {(pendingProposal as unknown as { params?: { proposer?: { metadata?: { name?: string } } } })?.params?.proposer?.metadata?.name || "Unknown dApp"} wants to connect
+                          {(pendingProposal as ProposalType).proposer?.metadata?.name || "Unknown dApp"} wants to connect
                         </h4>
-                        <p className="mb-2 text-center">{(pendingProposal as unknown as { params?: { proposer?: { metadata?: { url?: string } } } })?.params?.proposer?.metadata?.url || ""}</p>
+                        <p className="mb-2 text-center">{(pendingProposal as ProposalType).proposer?.metadata?.url || ""}</p>
                         <p className="mb-4 text-center text-sm text-gray-500">
-                          {(pendingProposal as unknown as { params?: { proposer?: { metadata?: { description?: string } } } })?.params?.proposer?.metadata?.description || ""}
+                          {(pendingProposal as ProposalType).proposer?.metadata?.description || ""}
                         </p>
                       </div>
 
@@ -326,26 +360,18 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
 
                       <div className="bg-base-200 rounded-box p-4">
                         <h5 className="mb-2 font-semibold">Requested Permissions:</h5>
-                        {Object.entries(
-                          (pendingProposal as unknown as { params?: { requiredNamespaces?: Record<string, unknown> } })
-                            ?.params?.requiredNamespaces || {},
-                        ).map(([namespace, details]) => {
-                          const namespaceDetails = details as {
-                            chains?: string[];
-                            methods?: string[];
-                            events?: string[];
-                          };
-                          return (
+                        {Object.entries((pendingProposal as ProposalType).requiredNamespaces || {}).map(
+                          ([namespace, details]: [string, NamespaceValue]) => (
                             <div key={namespace} className="mb-2">
                               <p className="font-medium">{namespace}:</p>
                               <div className="pl-4 text-sm">
-                                {namespaceDetails.chains && <p>Chains: {namespaceDetails.chains.join(", ")}</p>}
-                                <p>Methods: {namespaceDetails.methods?.join(", ")}</p>
-                                <p>Events: {namespaceDetails.events?.join(", ")}</p>
+                                {details.chains && <p>Chains: {details.chains.join(", ")}</p>}
+                                <p>Methods: {details.methods?.join(", ") || ""}</p>
+                                <p>Events: {details.events?.join(", ") || ""}</p>
                               </div>
                             </div>
-                          );
-                        })}
+                          ),
+                        )}
                       </div>
                     </div>
                   ) : (

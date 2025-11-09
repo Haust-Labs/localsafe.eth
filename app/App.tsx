@@ -14,6 +14,8 @@ import NewSafeTxClient from "./safe/[address]/new-tx/NewSafeTxClient";
 import TxDetailsClient from "./safe/[address]/tx/[txHash]/TxDetailsClient";
 import WalletConnectTxClient from "./safe/[address]/wc-tx/WalletConnectTxClient";
 import WalletConnectSignClient from "./safe/[address]/wc-sign/WalletConnectSignClient";
+import MessageDetailsClient from "./safe/[address]/message/[messageHash]/MessageDetailsClient";
+import SignMessageClient from "./safe/[address]/sign-message/SignMessageClient";
 
 // Wrapper components to pass route params to client components
 function SafeDashboardWrapper() {
@@ -39,6 +41,16 @@ function WalletConnectTxWrapper() {
 function WalletConnectSignWrapper() {
   const { address } = useParams<{ address: string }>();
   return <WalletConnectSignClient safeAddress={address as `0x${string}`} />;
+}
+
+function MessageDetailsWrapper() {
+  const { address, messageHash } = useParams<{ address: string; messageHash: string }>();
+  return <MessageDetailsClient safeAddress={address as `0x${string}`} messageHash={messageHash!} />;
+}
+
+function SignMessageWrapper() {
+  const { address } = useParams<{ address: string }>();
+  return <SignMessageClient safeAddress={address as `0x${string}`} />;
 }
 
 // Layout component that wraps all routes with NavBar and Footer
@@ -70,7 +82,9 @@ export default function App() {
           {/* Dynamic routes - Safe pages */}
           <Route path="/safe/:address" element={<SafeDashboardWrapper />} />
           <Route path="/safe/:address/new-tx" element={<NewSafeTxWrapper />} />
+          <Route path="/safe/:address/sign-message" element={<SignMessageWrapper />} />
           <Route path="/safe/:address/tx/:txHash" element={<TxDetailsWrapper />} />
+          <Route path="/safe/:address/message/:messageHash" element={<MessageDetailsWrapper />} />
           <Route path="/safe/:address/wc-tx" element={<WalletConnectTxWrapper />} />
           <Route path="/safe/:address/wc-sign" element={<WalletConnectSignWrapper />} />
         </Route>
