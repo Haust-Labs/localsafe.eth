@@ -19,41 +19,8 @@ import {
   phantomWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
-import {
-  mainnet,
-  sepolia,
-  anvil,
-  gnosis,
-  polygon,
-  polygonZkEvm,
-  bsc,
-  optimism,
-  base,
-  linea,
-  scroll,
-  celo,
-  avalanche,
-  mantle,
-  arbitrum,
-  baseSepolia,
-  zkSync,
-  zora,
-} from "wagmi/chains";
+import { defineChain } from "viem";
 import ethereumIcon from "../assets/chainIcons/ethereum.svg";
-import arbitrumIcon from "../assets/chainIcons/arbitrum.svg";
-import optimismIcon from "../assets/chainIcons/optimism.svg";
-import baseIcon from "../assets/chainIcons/base.svg";
-import polygonIcon from "../assets/chainIcons/polygon.svg";
-import zkSyncIcon from "../assets/chainIcons/zksync.svg";
-import zoraIcon from "../assets/chainIcons/zora.svg";
-import scrollIcon from "../assets/chainIcons/scroll.svg";
-import lineaIcon from "../assets/chainIcons/linea.svg";
-import gnosisIcon from "../assets/chainIcons/gnosis.svg";
-import bscIcon from "../assets/chainIcons/bsc.svg";
-import avalancheIcon from "../assets/chainIcons/avalanche.svg";
-import celoIcon from "../assets/chainIcons/celo.svg";
-import mantleIcon from "../assets/chainIcons/mantle.svg";
-import hardhatIcon from "../assets/chainIcons/hardhat.svg";
 
 // Helper to add icon URLs to chains
 const addChainIcon = (chain: Chain, iconUrl: string): Chain =>
@@ -62,26 +29,31 @@ const addChainIcon = (chain: Chain, iconUrl: string): Chain =>
     iconUrl,
   }) as Chain;
 
-// Default chains that should always be available with local SVG icons
+// Haust Mainnet configuration
+const haustMainnet = defineChain({
+  id: 3864,
+  name: "Haust Network",
+  nativeCurrency: {
+    name: "HAUST",
+    symbol: "HAUST",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://haust-network-rpc.eu-north-2.gateway.fm/"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Haust Blockscout",
+      url: "https://haustscan.com",
+    },
+  },
+});
+
+// Default chains - only Haust Mainnet
 const DEFAULT_CHAINS: Chain[] = [
-  addChainIcon(mainnet, ethereumIcon.src),
-  addChainIcon(arbitrum, arbitrumIcon.src),
-  addChainIcon(optimism, optimismIcon.src),
-  addChainIcon(base, baseIcon.src),
-  addChainIcon(polygon, polygonIcon.src),
-  addChainIcon(polygonZkEvm, polygonIcon.src), // Uses same polygon icon
-  addChainIcon(zkSync, zkSyncIcon.src),
-  addChainIcon(zora, zoraIcon.src),
-  addChainIcon(scroll, scrollIcon.src),
-  addChainIcon(linea, lineaIcon.src),
-  addChainIcon(gnosis, gnosisIcon.src),
-  addChainIcon(bsc, bscIcon.src),
-  addChainIcon(avalanche, avalancheIcon.src),
-  addChainIcon(celo, celoIcon.src),
-  addChainIcon(mantle, mantleIcon.src),
-  addChainIcon(sepolia, ethereumIcon.src), // Uses ethereum icon
-  addChainIcon(baseSepolia, baseIcon.src), // Uses base icon
-  addChainIcon(anvil, hardhatIcon.src), // Uses hardhat icon for local dev
+  addChainIcon(haustMainnet, ethereumIcon.src), // Using ethereum icon as placeholder
 ];
 
 export interface WagmiConfigContextType {
@@ -108,17 +80,10 @@ export const WagmiConfigProvider: React.FC<{
   // Load chains from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // Always use DEFAULT_CHAINS (Haust Mainnet only) and clear any stored networks
       setConfigChains(DEFAULT_CHAINS);
-      const stored = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
-      if (stored) {
-        try {
-          setConfigChains(JSON.parse(stored));
-        } catch {
-          setConfigChains(DEFAULT_CHAINS);
-        }
-      } else {
-        setConfigChains(DEFAULT_CHAINS);
-      }
+      // Clear localStorage to remove old networks
+      localStorage.removeItem(WAGMI_CONFIG_NETWORKS_KEY);
       setChainsLoaded(true);
     }
   }, []);
@@ -138,8 +103,9 @@ export const WagmiConfigProvider: React.FC<{
     // This ensures we use the user's wallet RPC instead of public RPC endpoints
     const transports = configChains.reduce(
       (acc, chain) => {
-        // Fallback to public RPC if connector doesn't respond
-        acc[chain.id] = fallback([unstable_connector(injected), http()]);
+        // Fallback to chain's RPC URL if connector doesn't respond
+        const rpcUrl = chain.rpcUrls.default.http[0];
+        acc[chain.id] = fallback([unstable_connector(injected), http(rpcUrl)]);
         return acc;
       },
       {} as Record<number, ReturnType<typeof fallback>>,
@@ -168,7 +134,7 @@ export const WagmiConfigProvider: React.FC<{
     );
 
     return createConfig({
-      chains: configChains as [typeof mainnet, ...[typeof mainnet]],
+      chains: configChains as [typeof haustMainnet, ...[typeof haustMainnet]],
       connectors,
       transports,
       ssr: false,
