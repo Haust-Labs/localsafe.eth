@@ -12,18 +12,10 @@ import SafeDetails from "@/app/components/SafeDetails";
 import Stepper from "@/app/components/Stepper";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import { isValidAddress } from "@/app/utils/helpers";
-import {
-  CREATE_STEPS,
-  DEFAULT_DEPLOY_STEPS,
-  STEPS_DEPLOY_LABEL,
-} from "@/app/utils/constants";
+import { CREATE_STEPS, DEFAULT_DEPLOY_STEPS, STEPS_DEPLOY_LABEL } from "@/app/utils/constants";
 import { useNavigate } from "react-router-dom";
 import useNewSafe from "@/app/hooks/useNewSafe";
-import {
-  SafeDeployStep,
-  PendingSafeStatus,
-  PayMethod,
-} from "@/app/utils/types";
+import { SafeDeployStep, PendingSafeStatus, PayMethod } from "@/app/utils/types";
 import { Chain, zeroAddress } from "viem";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import { getRandomSafeName } from "@/app/utils/helpers";
@@ -51,8 +43,7 @@ export default function CreateSafeClient() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [predictError, setPredictError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deploySteps, setDeploySteps] =
-    useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
+  const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
 
@@ -75,9 +66,7 @@ export default function CreateSafeClient() {
   // Modal state for deployment progress
   const [modalOpen, setModalOpen] = useState(false);
   // Predict Safe address for all selected chains when entering validation step
-  const [predictedAddresses, setPredictedAddresses] = useState<
-    Record<string, `0x${string}` | null>
-  >({});
+  const [predictedAddresses, setPredictedAddresses] = useState<Record<string, `0x${string}` | null>>({});
 
   /**
    * Auto-fill first signer with connected wallet address when available
@@ -119,9 +108,7 @@ export default function CreateSafeClient() {
    * @param value New value for the signer field
    */
   function handleSignerChange(signerIdx: number, value: string) {
-    setSigners((prevSigners) =>
-      prevSigners.map((owner, idx) => (idx === signerIdx ? value : owner)),
-    );
+    setSigners((prevSigners) => prevSigners.map((owner, idx) => (idx === signerIdx ? value : owner)));
   }
 
   // Step content as components (now with StepNetworks)
@@ -167,32 +154,18 @@ export default function CreateSafeClient() {
    * @returns Object containing the consistent safe address, used salt nonce, and predictions per chain
    */
   const predictConsistentSafeAddressAcrossChains = useCallback(
-    async (
-      owners: `0x${string}`[],
-      threshold: number,
-      chains: Chain[],
-      initialSaltNonce: string,
-      maxAttempts = 20,
-    ) => {
+    async (owners: `0x${string}`[], threshold: number, chains: Chain[], initialSaltNonce: string, maxAttempts = 20) => {
       let saltNonce = initialSaltNonce;
       // Try up to maxAttempts to find a consistent address
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const predictions: Record<
-          string,
-          { address: `0x${string}`; isDeployed: boolean }
-        > = {};
+        const predictions: Record<string, { address: `0x${string}`; isDeployed: boolean }> = {};
         for (const chain of chains) {
           let result = {
             address: zeroAddress as `0x${string}`,
             isDeployed: false,
           };
           try {
-            result = await predictNewSafeAddress(
-              owners,
-              threshold,
-              chain,
-              saltNonce,
-            );
+            result = await predictNewSafeAddress(owners, threshold, chain, saltNonce);
           } catch {
             // fallback already set
           }
@@ -201,9 +174,7 @@ export default function CreateSafeClient() {
         // Check if all predicted addresses match and none are deployed
         const addresses = Object.values(predictions).map((p) => p.address);
         const allMatch = addresses.every((addr) => addr === addresses[0]);
-        const anyDeployed = Object.values(predictions).some(
-          (p) => p.isDeployed,
-        );
+        const anyDeployed = Object.values(predictions).some((p) => p.isDeployed);
 
         // If all match and none deployed, return the result
         if (allMatch && !anyDeployed) {
@@ -231,12 +202,7 @@ export default function CreateSafeClient() {
     let cancelled = false;
     async function runPrediction() {
       // Only run prediction when entering step 2 with valid data
-      if (
-        currentStep !== 2 ||
-        selectedChains.length === 0 ||
-        signers.filter(Boolean).length === 0 ||
-        threshold === 0
-      )
+      if (currentStep !== 2 || selectedChains.length === 0 || signers.filter(Boolean).length === 0 || threshold === 0)
         return;
       // Reset previous prediction state
       setIsPredicting(true);
@@ -244,21 +210,15 @@ export default function CreateSafeClient() {
       const validSigners = signers.filter(isValidAddress);
       try {
         // Predict consistent Safe address across selected chains
-        const { saltNonce: foundSaltNonce, predictions } =
-          await predictConsistentSafeAddressAcrossChains(
-            validSigners,
-            threshold,
-            selectedChains,
-            saltNonce.toString(),
-          );
+        const { saltNonce: foundSaltNonce, predictions } = await predictConsistentSafeAddressAcrossChains(
+          validSigners,
+          threshold,
+          selectedChains,
+          saltNonce.toString(),
+        );
         if (!cancelled) {
           setPredictedAddresses(
-            Object.fromEntries(
-              Object.entries(predictions).map(([id, prediction]) => [
-                id,
-                prediction.address,
-              ]),
-            ),
+            Object.fromEntries(Object.entries(predictions).map(([id, prediction]) => [id, prediction.address])),
           );
           setSaltNonce(Number(foundSaltNonce));
         }
@@ -323,11 +283,7 @@ export default function CreateSafeClient() {
       // If any step failed, set error and keep modal open
       if (steps.some((s) => s.status === "error")) {
         const errorStep = steps.find((s) => s.status === "error");
-        setDeployError(
-          errorStep && errorStep.error
-            ? `Deployment error: ${errorStep.error}`
-            : "Deployment error",
-        );
+        setDeployError(errorStep && errorStep.error ? `Deployment error: ${errorStep.error}` : "Deployment error");
         return;
       }
     } catch (e: unknown) {
@@ -367,9 +323,7 @@ export default function CreateSafeClient() {
     selectedChains.forEach((chain) => {
       const address = predictedAddresses[chain.id];
       if (address) {
-        const chainContracts = contractNetworks
-          ? contractNetworks[String(chain.id)]
-          : {};
+        const chainContracts = contractNetworks ? contractNetworks[String(chain.id)] : {};
         addSafe(String(chain.id), address, safeName.trim() || randomName, {
           props: {
             // The Safe Proxy Factory contract is used to deploy new Safe contracts
@@ -425,20 +379,12 @@ export default function CreateSafeClient() {
           <div className="self-start">
             <BtnCancel to="/accounts" data-testid="cancel-create-safe-btn" />
           </div>
-          <Stepper
-            steps={CREATE_STEPS}
-            currentStep={currentStep}
-            data-testid="create-safe-stepper"
-          />
+          <Stepper steps={CREATE_STEPS} currentStep={currentStep} data-testid="create-safe-stepper" />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center">
           {/* Review & Validate */}
           {currentStep === 2 ? (
-            <AppCard
-              title="Review & Validate Safe Account"
-              className="w-full"
-              data-testid="review-safe-card"
-            >
+            <AppCard title="Review & Validate Safe Account" className="w-full" data-testid="review-safe-card">
               <SafeDetails
                 safeName={safeName.trim() || randomName}
                 selectedNetworks={selectedChains}
@@ -448,26 +394,17 @@ export default function CreateSafeClient() {
               <div className="divider my-0" />
               <div className="flex flex-col gap-4">
                 {isPredicting ? (
-                  <div
-                    className="flex items-center gap-2"
-                    data-testid="safe-predicting-indicator"
-                  >
+                  <div className="flex items-center gap-2" data-testid="safe-predicting-indicator">
                     <span>Predicting Safe address</span>
                     <span className="loading loading-dots loading-xs" />
                   </div>
                 ) : (
                   Object.keys(predictedAddresses).length > 0 && (
                     <div data-testid="predicted-safe-address">
-                      <p className="mb-1 text-lg font-semibold">
-                        Predicted Safe Address:
-                      </p>
+                      <p className="mb-1 text-lg font-semibold">Predicted Safe Address:</p>
                       <div className="flex flex-wrap gap-2 p-2">
                         <AppAddress
-                          address={
-                            Object.values(predictedAddresses).find(
-                              (addr) => !!addr,
-                            ) || "N/A"
-                          }
+                          address={Object.values(predictedAddresses).find((addr) => !!addr) || "N/A"}
                           className="text-sm"
                           testid="predicted-safe-address-value"
                         />
@@ -476,10 +413,7 @@ export default function CreateSafeClient() {
                   )
                 )}
                 {predictError && (
-                  <div
-                    className="alert alert-error"
-                    data-testid="safe-predict-error"
-                  >
+                  <div className="alert alert-error" data-testid="safe-predict-error">
                     {predictError}
                   </div>
                 )}
@@ -496,13 +430,7 @@ export default function CreateSafeClient() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={
-                        Object.values(predictedAddresses).some(
-                          (addr) => !addr,
-                        ) ||
-                        isPredicting ||
-                        isDeploying
-                      }
+                      disabled={Object.values(predictedAddresses).some((addr) => !addr) || isPredicting || isDeploying}
                       onClick={handleDeploySafe}
                       data-testid="create-safe-btn"
                     >
@@ -514,9 +442,7 @@ export default function CreateSafeClient() {
                       className="btn btn-accent"
                       disabled={
                         selectedChains.length === 0 ||
-                        Object.values(predictedAddresses).some(
-                          (addr) => !addr,
-                        ) ||
+                        Object.values(predictedAddresses).some((addr) => !addr) ||
                         isPredicting
                       }
                       onClick={handleValidateMultiChain}
@@ -535,10 +461,7 @@ export default function CreateSafeClient() {
               {stepContent[currentStep]}
               {/* Safe Info Card: Display Selected Networks */}
               <div className="col-span-10 col-start-2 md:col-span-5 md:col-start-auto">
-                <AppCard
-                  title="Safe Account Preview"
-                  data-testid="safe-preview-card"
-                >
+                <AppCard title="Safe Account Preview" data-testid="safe-preview-card">
                   <SafeDetails
                     safeName={safeName.trim() || randomName}
                     selectedNetworks={selectedChains}
@@ -562,15 +485,9 @@ export default function CreateSafeClient() {
         selectedNetwork={chain}
         onClose={handleCloseModal}
         closeLabel="Close"
-        successLabel={
-          isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
-            ? "Go to Accounts"
-            : undefined
-        }
+        successLabel={isDeploySuccess(deploySteps, deployTxHash, predictedAddresses) ? "Go to Accounts" : undefined}
         onSuccess={
-          isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
-            ? () => navigate("/accounts")
-            : undefined
+          isDeploySuccess(deploySteps, deployTxHash, predictedAddresses) ? () => navigate("/accounts") : undefined
         }
       />
     </>

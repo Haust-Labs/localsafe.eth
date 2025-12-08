@@ -11,15 +11,7 @@ import { Link } from "react-router-dom";
  * @param {boolean} [noArrow=false] - If true, the arrow icon is not displayed.
  * @returns A styled link component that acts as a cancel button.
  */
-export default function BtnCancel({
-  label,
-  to,
-  noArrow = false,
-}: {
-  label?: string;
-  to: string;
-  noArrow?: boolean;
-}) {
+export default function BtnCancel({ label, to, noArrow = false }: { label?: string; to: string; noArrow?: boolean }) {
   return (
     <Link className="btn btn-ghost btn-secondary align" to={to}>
       {noArrow ? null : "←"} {label || "Cancel"}

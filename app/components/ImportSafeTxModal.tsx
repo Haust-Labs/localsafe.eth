@@ -15,11 +15,8 @@ export interface ImportSafeTxModalProps {
  * @param {ImportTxPreview | { error: string } | null} data - The imported transaction data or an error object.
  * @returns A summary string of the transaction data or an error message.
  */
-function getSafeTxSummary(
-  data: ImportTxPreview | { error: string } | null,
-): string {
-  if (!data || typeof data !== "object" || "error" in data)
-    return "No valid transaction data.";
+function getSafeTxSummary(data: ImportTxPreview | { error: string } | null): string {
+  if (!data || typeof data !== "object" || "error" in data) return "No valid transaction data.";
   let summary = "";
   try {
     summary += `Transaction Preview\n`;
@@ -39,12 +36,7 @@ function getSafeTxSummary(
  * @param {() => void} onReplace - Function to call when replacing the current transaction with the imported one.
  * @returns A modal component for importing a Safe transaction.
  */
-export default function ImportSafeTxModal({
-  open,
-  onClose,
-  importPreview,
-  onReplace,
-}: ImportSafeTxModalProps) {
+export default function ImportSafeTxModal({ open, onClose, importPreview, onReplace }: ImportSafeTxModalProps) {
   return (
     <Modal
       open={open}
@@ -53,19 +45,13 @@ export default function ImportSafeTxModal({
       showCloseButton={false}
       testid="safe-dashboard-import-tx-modal-root"
     >
-      <h2
-        className="mb-2 text-lg font-bold"
-        data-testid="safe-dashboard-import-tx-modal-title"
-      >
+      <h2 className="mb-2 text-lg font-bold" data-testid="safe-dashboard-import-tx-modal-title">
         Import Transaction JSON
       </h2>
-      <div
-        className="alert alert-warning mb-4 text-sm"
-        data-testid="safe-dashboard-import-tx-modal-warning"
-      >
+      <div className="alert alert-warning mb-4 text-sm" data-testid="safe-dashboard-import-tx-modal-warning">
         <span>
-          <strong>Warning:</strong> This will replace your current transaction
-          for this Safe. This action cannot be undone.
+          <strong>Warning:</strong> This will replace your current transaction for this Safe. This action cannot be
+          undone.
         </span>
       </div>
       <div
@@ -76,25 +62,14 @@ export default function ImportSafeTxModal({
           {getSafeTxSummary(importPreview)}
         </pre>
       </div>
-      <div
-        className="flex justify-end gap-2"
-        data-testid="safe-dashboard-import-tx-modal-actions"
-      >
-        <button
-          className="btn btn-outline"
-          data-testid="safe-dashboard-import-tx-modal-cancel-btn"
-          onClick={onClose}
-        >
+      <div className="flex justify-end gap-2" data-testid="safe-dashboard-import-tx-modal-actions">
+        <button className="btn btn-outline" data-testid="safe-dashboard-import-tx-modal-cancel-btn" onClick={onClose}>
           Cancel
         </button>
         <button
           className="btn btn-primary"
           data-testid="safe-dashboard-import-tx-modal-replace-btn"
-          disabled={
-            typeof importPreview !== "object" ||
-            importPreview === null ||
-            "error" in importPreview
-          }
+          disabled={typeof importPreview !== "object" || importPreview === null || "error" in importPreview}
           onClick={onReplace}
         >
           Replace

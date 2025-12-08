@@ -49,9 +49,7 @@ export function getViemChainFromId(chainId: number): Chain | undefined {
  * @returns {Promise<DetectedChainResult>} - A promise that resolves to the detected chain information.
  * @throws Will throw an error if the chain cannot be detected.
  */
-export async function detectChainFromRpc(
-  rpcUrl: string,
-): Promise<DetectedChainResult> {
+export async function detectChainFromRpc(rpcUrl: string): Promise<DetectedChainResult> {
   const client = createPublicClient({ transport: http(rpcUrl) });
   const chainId = await client.getChainId();
   // Try to find a matching chain in viem/chains
@@ -87,8 +85,7 @@ export async function detectChainFromRpc(
 export function useChainManager() {
   const { configChains, setConfigChains } = useWagmiConfigContext();
   const [error, setError] = useState<string | null>(null);
-  const [detectedChain, setDetectedChain] =
-    useState<DetectedChainResult | null>(null);
+  const [detectedChain, setDetectedChain] = useState<DetectedChainResult | null>(null);
   const [detecting, setDetecting] = useState<boolean>(false);
 
   // Add or update a chain

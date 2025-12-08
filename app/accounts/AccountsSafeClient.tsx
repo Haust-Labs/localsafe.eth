@@ -28,28 +28,19 @@ export default function AccountsPage() {
   const [showDeployed, setShowDeployed] = useState(true);
   // State for import modal and preview
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
-  const [importPreview, setImportPreview] = useState<
-    SafeWalletData | { error: string } | null
-  >(null);
+  const [importPreview, setImportPreview] = useState<SafeWalletData | { error: string } | null>(null);
 
   // Ref for hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Group safes by safeAddress for accordion display using addressBook and undeployedSafes
   function getGroupedSafes(type: "deployed" | "undeployed") {
-    const grouped: Record<
-      string,
-      Array<{ chainId: string; name: string }>
-    > = {};
+    const grouped: Record<string, Array<{ chainId: string; name: string }>> = {};
     const { addressBook, undeployedSafes } = safeWalletData.data;
     Object.entries(addressBook).forEach(([chainId, safesObj]) => {
       Object.entries(safesObj).forEach(([safeAddress, name]) => {
-        const isUndeployed =
-          undeployedSafes[chainId] && undeployedSafes[chainId][safeAddress];
-        if (
-          (type === "undeployed" && isUndeployed) ||
-          (type === "deployed" && !isUndeployed)
-        ) {
+        const isUndeployed = undeployedSafes[chainId] && undeployedSafes[chainId][safeAddress];
+        if ((type === "undeployed" && isUndeployed) || (type === "deployed" && !isUndeployed)) {
           if (!grouped[safeAddress]) grouped[safeAddress] = [];
           grouped[safeAddress].push({
             chainId,
@@ -62,9 +53,7 @@ export default function AccountsPage() {
   }
 
   // Get safes to display based on toggle
-  const groupedSafes = getGroupedSafes(
-    showDeployed ? "deployed" : "undeployed",
-  );
+  const groupedSafes = getGroupedSafes(showDeployed ? "deployed" : "undeployed");
 
   // Export SafeWallet data as JSON file
   function handleExport() {
@@ -117,18 +106,10 @@ export default function AccountsPage() {
           <h2 className="text-3xl font-bold">Safe Accounts</h2>
           {/* Create / Add Safe Buttons */}
           <div className="flex flex-col gap-2 md:flex-row">
-            <Link
-              to="/new-safe/create"
-              className="btn btn-primary btn-sm"
-              data-testid="create-safe-nav-btn"
-            >
+            <Link to="/new-safe/create" className="btn btn-primary btn-sm" data-testid="create-safe-nav-btn">
               Deploy New Safe
             </Link>
-            <Link
-              to="/new-safe/connect"
-              className="btn btn-secondary btn-sm"
-              data-testid="add-safe-nav-btn"
-            >
+            <Link to="/new-safe/connect" className="btn btn-secondary btn-sm" data-testid="add-safe-nav-btn">
               Add Existing Safe
             </Link>
           </div>
@@ -140,7 +121,7 @@ export default function AccountsPage() {
             data-tip="Toggle between safes that are deployed on-chain vs. safes that are configured but not yet deployed"
           >
             <svg
-              className="h-4 w-4 text-base-content opacity-60"
+              className="text-base-content h-4 w-4 opacity-60"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -185,12 +166,8 @@ export default function AccountsPage() {
                 >
                   <input type="checkbox" data-testid="safe-account-collapse" />
                   <div className="collapse-title flex items-center gap-2 font-semibold">
-                    <span className="text-lg font-bold break-all">
-                      {displayName}
-                    </span>
-                    <span className="font-mono text-xs break-all text-gray-500">
-                      {safeAddress}
-                    </span>
+                    <span className="text-lg font-bold break-all">{displayName}</span>
+                    <span className="font-mono text-xs break-all text-gray-500">{safeAddress}</span>
                   </div>
                   {/*  Expanded content with chain links */}
                   <div className="collapse-content">
@@ -200,16 +177,11 @@ export default function AccountsPage() {
                           className="list-row border-accent text-base-content hover:bg-base-200 flex w-full items-center gap-4 rounded border-2 p-4 font-bold"
                           to={`/safe/${safeAddress}`}
                           key={chainId}
-                          onClick={() =>
-                            switchChain({ chainId: parseInt(chainId) })
-                          }
+                          onClick={() => switchChain({ chainId: parseInt(chainId) })}
                           data-testid={`safe-account-link-${safeAddress}-${chainId}`}
                         >
-                          {wagmiChains.find((c) => c.id.toString() === chainId)
-                            ?.name || chainId}
-                          <span className="ml-2 text-xs text-gray-500">
-                            ({chainId})
-                          </span>
+                          {wagmiChains.find((c) => c.id.toString() === chainId)?.name || chainId}
+                          <span className="ml-2 text-xs text-gray-500">({chainId})</span>
                         </Link>
                       ))}
                     </ul>
@@ -222,11 +194,7 @@ export default function AccountsPage() {
       </AppCard>
       {/* Import/Export buttons below the card */}
       <div className="mt-6 flex justify-center gap-2">
-        <button
-          className="btn btn-primary btn-outline btn-sm"
-          onClick={handleExport}
-          data-testid="export-wallets-btn"
-        >
+        <button className="btn btn-primary btn-outline btn-sm" onClick={handleExport} data-testid="export-wallets-btn">
           Export Safes
         </button>
         <button
@@ -236,13 +204,7 @@ export default function AccountsPage() {
         >
           Import Safes
         </button>
-        <input
-          type="file"
-          className="hidden"
-          ref={fileInputRef}
-          accept=".json"
-          onChange={handleImportFile}
-        />
+        <input type="file" className="hidden" ref={fileInputRef} accept=".json" onChange={handleImportFile} />
       </div>
 
       {/* Import Modal using generic Modal component */}

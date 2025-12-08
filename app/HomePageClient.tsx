@@ -17,12 +17,9 @@ export default function HomePageClient() {
   return (
     <AppSection className="max-w-2xl self-center">
       <AppCard>
-        <h2 className="mb-4 text-center text-4xl font-bold">
-          Welcome to localsafe.eth
-        </h2>
+        <h2 className="mb-4 text-center text-4xl font-bold">Welcome to localsafe.eth</h2>
         <p className="mb-8 text-center text-xl">
-          Your local safe wallet app to manage safe accounts. Connect your
-          wallet to get started.
+          Your local safe wallet app to manage safe accounts. Connect your wallet to get started.
         </p>
         <div className="flex w-full flex-col items-center gap-6">
           {isConnected ? (

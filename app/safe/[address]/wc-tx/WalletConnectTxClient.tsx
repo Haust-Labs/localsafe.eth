@@ -9,21 +9,49 @@ import AppCard from "@/app/components/AppCard";
 import DataPreview from "@/app/components/DataPreview";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
+import type { SignClientTypes } from "@walletconnect/types";
 
-export default function WalletConnectTxClient({
-  safeAddress,
-}: {
-  safeAddress: `0x${string}`;
-}) {
+export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   const navigate = useNavigate();
   const { chain } = useAccount();
-  const { pendingRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
+  const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { buildSafeTransaction, kit, safeInfo } = useSafe(safeAddress);
 
-  const [txParams, setTxParams] = useState<any>(null);
+  interface TxParams {
+    to: string;
+    value?: string;
+    data?: string;
+    gas?: string;
+    gasPrice?: string;
+    maxFeePerGas?: string;
+    maxPriorityFeePerGas?: string;
+  }
+
+  const [txParams, setTxParams] = useState<TxParams | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [requestFromStorage, setRequestFromStorage] = useState<any>(null);
+  const [requestFromStorage, setRequestFromStorage] = useState<SignClientTypes.EventArguments["session_request"] | null>(
+    null,
+  );
   const [customNonce, setCustomNonce] = useState<string>("");
+
+  // Flash the tab title to get user's attention
+  useEffect(() => {
+    const originalTitle = document.title || "LocalSafe";
+    let isVisible = true;
+
+    // Set initial state
+    document.title = "🔔 Sign Transaction!";
+
+    const interval = setInterval(() => {
+      document.title = isVisible ? "🔔 Sign Transaction!" : originalTitle;
+      isVisible = !isVisible;
+    }, 1000); // Flash every second
+
+    return () => {
+      clearInterval(interval);
+      document.title = originalTitle;
+    };
+  }, []);
 
   // Load request from sessionStorage if not in context
   useEffect(() => {
@@ -67,14 +95,17 @@ export default function WalletConnectTxClient({
       }
 
       // Build the Safe transaction
-      const safeTx = await buildSafeTransaction([
-        {
-          to: txParams.to,
-          value: txParams.value || "0",
-          data: txParams.data || "0x",
-          operation: 0,
-        },
-      ], nonce);
+      const safeTx = await buildSafeTransaction(
+        [
+          {
+            to: txParams.to,
+            value: txParams.value || "0",
+            data: txParams.data || "0x",
+            operation: 0,
+          },
+        ],
+        nonce,
+      );
 
       if (!safeTx) {
         throw new Error("Failed to build Safe transaction");
@@ -83,11 +114,17 @@ export default function WalletConnectTxClient({
       // Get the Safe transaction hash
       const safeTxHash = await kit?.getTransactionHash(safeTx);
 
-      // For Safe wallets, we need to reject the request since we can't provide an immediate tx hash
-      // The user will sign and broadcast the Safe transaction separately
-      await rejectRequest(currentRequest.topic, {
-        code: 4001,
-        message: "Safe transaction created. Please sign and broadcast it separately.",
+      if (!safeTxHash) {
+        throw new Error("Failed to get Safe transaction hash");
+      }
+
+      // Approve the WalletConnect request with the Safe transaction hash
+      // Note: We're sending a safeTxHash (internal Safe hash for signature collection)
+      // not a blockchain transaction hash. The dApp will show this as "pending".
+      await approveRequest(currentRequest.topic, {
+        id: currentRequest.id,
+        jsonrpc: "2.0",
+        result: safeTxHash,
       });
 
       // Clear from sessionStorage
@@ -107,11 +144,6 @@ export default function WalletConnectTxClient({
   const handleReject = async () => {
     if (!currentRequest) return;
 
-    console.log("🔴 handleReject called");
-    console.log("🔴 currentRequest:", currentRequest);
-    console.log("🔴 currentRequest.topic:", currentRequest.topic);
-    console.log("🔴 currentRequest.id:", currentRequest.id);
-
     setIsProcessing(true);
     try {
       await rejectRequest(
@@ -120,11 +152,10 @@ export default function WalletConnectTxClient({
           code: 4001,
           message: "User rejected the request",
         },
-        currentRequest.id // Pass the request ID
+        currentRequest.id, // Pass the request ID
       );
-      console.log("🔴 rejectRequest completed successfully");
     } catch (error) {
-      console.error("🔴 Failed to reject transaction:", error);
+      console.error("Failed to reject transaction:", error);
       alert(`Failed to reject transaction: ${error instanceof Error ? error.message : String(error)}`);
       setIsProcessing(false);
       return;
@@ -141,12 +172,9 @@ export default function WalletConnectTxClient({
     return (
       <AppSection>
         <AppCard title="WalletConnect Transaction">
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p>No pending transaction request found.</p>
-            <button
-              className="btn btn-primary mt-4"
-              onClick={() => navigate(`/safe/${safeAddress}`)}
-            >
+            <button className="btn btn-primary mt-4" onClick={() => navigate(`/safe/${safeAddress}`)}>
               Back to Safe
             </button>
           </div>
@@ -155,7 +183,9 @@ export default function WalletConnectTxClient({
     );
   }
 
-  const dappMetadata = (currentRequest.params as any)?.proposer?.metadata || (currentRequest.verifyContext as any)?.verified?.metadata;
+  const dappMetadata = (currentRequest as unknown as {
+    params?: { proposer?: { metadata?: { icons?: string[]; name?: string; url?: string; description?: string } } };
+  })?.params?.proposer?.metadata;
 
   return (
     <AppSection testid="wc-tx-section">
@@ -165,18 +195,16 @@ export default function WalletConnectTxClient({
           onClick={async () => {
             if (currentRequest) {
               try {
-                console.log("🔴 Rejecting request:", currentRequest.id);
                 await rejectRequest(
                   currentRequest.topic,
                   {
                     code: 4001,
                     message: "User cancelled the request",
                   },
-                  currentRequest.id // Pass the request ID
+                  currentRequest.id, // Pass the request ID
                 );
-                console.log("🔴 Request rejected successfully");
               } catch (error) {
-                console.error("🔴 Failed to reject request:", error);
+                console.error("Failed to reject request:", error);
               } finally {
                 // Always clear pending request state as a safety measure
                 clearPendingRequest();
@@ -195,16 +223,12 @@ export default function WalletConnectTxClient({
           {/* dApp Info */}
           {dappMetadata && (
             <div className="bg-base-200 rounded-box p-4">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 {dappMetadata.icons?.[0] && (
-                  <img
-                    src={dappMetadata.icons[0]}
-                    alt={dappMetadata.name}
-                    className="w-12 h-12 rounded"
-                  />
+                  <img src={dappMetadata.icons[0]} alt={dappMetadata.name} className="h-12 w-12 rounded" />
                 )}
                 <div>
-                  <h4 className="font-bold text-lg">{dappMetadata.name}</h4>
+                  <h4 className="text-lg font-bold">{dappMetadata.name}</h4>
                   <p className="text-sm text-gray-500">{dappMetadata.url}</p>
                 </div>
               </div>
@@ -223,18 +247,12 @@ export default function WalletConnectTxClient({
 
             <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Value (wei)</span>
-              <span className="font-mono text-sm">
-                {txParams.value || "0"}
-              </span>
+              <span className="font-mono text-sm">{txParams.value || "0"}</span>
             </div>
 
             <div className="flex items-center justify-between px-4 py-3">
               <span className="font-semibold">Value (ETH)</span>
-              <span>
-                {txParams.value
-                  ? formatEther(BigInt(txParams.value))
-                  : "0"}
-              </span>
+              <span>{txParams.value ? formatEther(BigInt(txParams.value)) : "0"}</span>
             </div>
 
             <div className="flex items-center justify-between px-4 py-3">
@@ -296,7 +314,7 @@ export default function WalletConnectTxClient({
 
           {/* Custom Nonce */}
           <div className="bg-base-200 rounded-box p-4">
-            <h5 className="font-semibold mb-2">Custom Nonce (optional)</h5>
+            <h5 className="mb-2 font-semibold">Custom Nonce (optional)</h5>
             <input
               type="number"
               className="input input-bordered w-full"
@@ -306,24 +324,18 @@ export default function WalletConnectTxClient({
               min="0"
               data-testid="wc-tx-nonce-input"
             />
-            <div className="text-sm text-gray-500 mt-1">
-              Current Safe nonce: {safeInfo?.nonce ?? "-"}
-            </div>
+            <div className="mt-1 text-sm text-gray-500">Current Safe nonce: {safeInfo?.nonce ?? "-"}</div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex gap-2">
             <button
               className="btn btn-error btn-outline flex-1"
               onClick={handleReject}
               disabled={isProcessing}
               data-testid="wc-tx-reject-btn"
             >
-              {isProcessing ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                "Reject"
-              )}
+              {isProcessing ? <span className="loading loading-spinner loading-sm"></span> : "Reject"}
             </button>
             <button
               className="btn btn-success flex-1"
@@ -343,14 +355,25 @@ export default function WalletConnectTxClient({
           </div>
 
           <div className="alert alert-warning">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 shrink-0 stroke-current"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
             <div className="flex flex-col">
               <span className="font-semibold">Safe Wallet Workflow</span>
               <span className="text-sm">
-                Clicking &quot;Create Safe Transaction&quot; will build a multi-sig transaction that requires signing and broadcasting.
-                The dApp request will be rejected since Safe transactions cannot provide an immediate transaction hash.
+                Clicking &quot;Create Safe Transaction&quot; will build a multi-sig transaction that requires signing
+                and broadcasting. The dApp request will be rejected since Safe transactions cannot provide an immediate
+                transaction hash.
               </span>
             </div>
           </div>

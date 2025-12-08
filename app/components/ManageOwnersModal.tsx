@@ -14,19 +14,10 @@ type ManageOwnersModalProps = {
   onClose: () => void;
   owners: string[];
   threshold: number;
-  onBatchUpdate: (
-    changes: OwnerChange[],
-    newThreshold: number
-  ) => Promise<void>;
+  onBatchUpdate: (changes: OwnerChange[], newThreshold: number) => Promise<void>;
 };
 
-export default function ManageOwnersModal({
-  open,
-  onClose,
-  owners,
-  threshold,
-  onBatchUpdate,
-}: ManageOwnersModalProps) {
+export default function ManageOwnersModal({ open, onClose, owners, threshold, onBatchUpdate }: ManageOwnersModalProps) {
   const [newOwnerAddress, setNewOwnerAddress] = useState("");
   const [ownersToRemove, setOwnersToRemove] = useState<Set<string>>(new Set());
   const [ownersToAdd, setOwnersToAdd] = useState<string[]>([]);
@@ -137,13 +128,9 @@ export default function ManageOwnersModal({
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-3xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-lg">Manage Owners & Threshold</h3>
-          <button
-            className="btn btn-ghost btn-sm btn-circle"
-            onClick={onClose}
-            disabled={isProcessing}
-          >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">Manage Owners & Threshold</h3>
+          <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose} disabled={isProcessing}>
             ✕
           </button>
         </div>
@@ -153,7 +140,7 @@ export default function ManageOwnersModal({
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            className="stroke-current shrink-0 w-6 h-6"
+            className="h-6 w-6 shrink-0 stroke-current"
           >
             <path
               strokeLinecap="round"
@@ -163,45 +150,44 @@ export default function ManageOwnersModal({
             ></path>
           </svg>
           <span className="text-sm">
-            Queue up multiple owner changes and update the threshold. All changes will be batched into a single transaction using MultiSend.
+            Queue up multiple owner changes and update the threshold. All changes will be batched into a single
+            transaction using MultiSend.
           </span>
         </div>
 
         {/* Current vs Final State */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="bg-base-200 rounded-box p-4">
-            <h4 className="font-semibold mb-2">Current State</h4>
+            <h4 className="mb-2 font-semibold">Current State</h4>
             <div className="flex justify-between">
               <span>Owners:</span>
               <span className="font-bold">{owners.length}</span>
             </div>
-            <div className="flex justify-between mt-1">
+            <div className="mt-1 flex justify-between">
               <span>Threshold:</span>
               <span className="font-bold">{threshold}</span>
             </div>
           </div>
           <div className="bg-base-200 rounded-box p-4">
-            <h4 className="font-semibold mb-2">Final State</h4>
+            <h4 className="mb-2 font-semibold">Final State</h4>
             <div className="flex justify-between">
               <span>Owners:</span>
               <span className={`font-bold ${finalOwnerCount !== owners.length ? "text-primary" : ""}`}>
                 {finalOwnerCount}
               </span>
             </div>
-            <div className="flex justify-between mt-1">
+            <div className="mt-1 flex justify-between">
               <span>Threshold:</span>
-              <span className={`font-bold ${newThreshold !== threshold ? "text-primary" : ""}`}>
-                {newThreshold}
-              </span>
+              <span className={`font-bold ${newThreshold !== threshold ? "text-primary" : ""}`}>{newThreshold}</span>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
           {/* Add Owners Section */}
-          <div className="border border-base-300 rounded-box p-4">
-            <h4 className="font-semibold mb-3">Add Owners</h4>
-            <div className="flex gap-2 mb-3">
+          <div className="border-base-300 rounded-box border p-4">
+            <h4 className="mb-3 font-semibold">Add Owners</h4>
+            <div className="mb-3 flex gap-2">
               <input
                 type="text"
                 className="input input-bordered flex-1"
@@ -223,7 +209,7 @@ export default function ManageOwnersModal({
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Queued to Add:</p>
                 {ownersToAdd.map((addr, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-success bg-opacity-10 rounded p-2">
+                  <div key={idx} className="bg-success bg-opacity-10 flex items-center justify-between rounded p-2">
                     <AppAddress address={addr as `0x${string}`} className="text-sm" />
                     <button
                       className="btn btn-ghost btn-xs"
@@ -239,27 +225,25 @@ export default function ManageOwnersModal({
           </div>
 
           {/* Remove Owners Section */}
-          <div className="border border-base-300 rounded-box p-4">
-            <h4 className="font-semibold mb-3">Remove Owners</h4>
-            <p className="text-sm text-gray-500 mb-3">Click owners to toggle removal</p>
+          <div className="border-base-300 rounded-box border p-4">
+            <h4 className="mb-3 font-semibold">Remove Owners</h4>
+            <p className="mb-3 text-sm text-gray-500">Click owners to toggle removal</p>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="max-h-64 space-y-2 overflow-y-auto">
               {owners.map((owner) => {
                 const isMarkedForRemoval = ownersToRemove.has(owner.toLowerCase());
                 return (
                   <div
                     key={owner}
-                    className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between rounded p-2 transition-colors ${
                       isMarkedForRemoval
-                        ? "bg-error bg-opacity-10 border border-error"
+                        ? "bg-error bg-opacity-10 border-error border"
                         : "bg-base-200 hover:bg-base-300"
                     }`}
                     onClick={() => handleToggleRemoveOwner(owner)}
                   >
                     <AppAddress address={owner as `0x${string}`} className="text-sm" />
-                    {isMarkedForRemoval && (
-                      <span className="badge badge-error badge-sm">Removing</span>
-                    )}
+                    {isMarkedForRemoval && <span className="badge badge-error badge-sm">Removing</span>}
                   </div>
                 );
               })}
@@ -267,8 +251,8 @@ export default function ManageOwnersModal({
           </div>
 
           {/* Change Threshold Section */}
-          <div className="border border-base-300 rounded-box p-4">
-            <h4 className="font-semibold mb-3">New Threshold</h4>
+          <div className="border-base-300 rounded-box border p-4">
+            <h4 className="mb-3 font-semibold">New Threshold</h4>
             <input
               type="number"
               className="input input-bordered w-full"
@@ -279,9 +263,7 @@ export default function ManageOwnersModal({
               disabled={isProcessing}
             />
             <label className="label">
-              <span className="label-text-alt">
-                Must be between 1 and {finalOwnerCount} (final owner count)
-              </span>
+              <span className="label-text-alt">Must be between 1 and {finalOwnerCount} (final owner count)</span>
             </label>
           </div>
         </div>
@@ -291,7 +273,7 @@ export default function ManageOwnersModal({
           <div className="alert alert-warning mt-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
+              className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
             >
@@ -304,28 +286,24 @@ export default function ManageOwnersModal({
             </svg>
             <div className="text-sm">
               <p className="font-semibold">Changes Summary:</p>
-              <ul className="list-disc list-inside">
+              <ul className="list-inside list-disc">
                 {ownersToRemove.size > 0 && <li>Remove {ownersToRemove.size} owner(s)</li>}
                 {ownersToAdd.length > 0 && <li>Add {ownersToAdd.length} owner(s)</li>}
-                {newThreshold !== threshold && <li>Change threshold from {threshold} to {newThreshold}</li>}
+                {newThreshold !== threshold && (
+                  <li>
+                    Change threshold from {threshold} to {newThreshold}
+                  </li>
+                )}
               </ul>
             </div>
           </div>
         )}
 
         <div className="modal-action">
-          <button
-            className="btn btn-ghost"
-            onClick={onClose}
-            disabled={isProcessing}
-          >
+          <button className="btn btn-ghost" onClick={onClose} disabled={isProcessing}>
             Cancel
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateTransaction}
-            disabled={isProcessing || !hasChanges}
-          >
+          <button className="btn btn-primary" onClick={handleCreateTransaction} disabled={isProcessing || !hasChanges}>
             {isProcessing ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>

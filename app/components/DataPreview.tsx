@@ -16,18 +16,14 @@ export default function DataPreview({ value }: { value: string }) {
   if (showAll || value.length <= PREVIEW_LEN) {
     return (
       <div className="max-w-full overflow-hidden">
-        <p className="break-all overflow-wrap-anywhere font-mono text-xs">
+        <p className="overflow-wrap-anywhere font-mono text-xs break-all">
           <b aria-label="The first 4 bytes determine the contract method that is being called">
             {value.slice(0, METHOD_SELECTOR_LEN)}
           </b>
           {value.slice(METHOD_SELECTOR_LEN)}
         </p>
         {value.length > PREVIEW_LEN && (
-          <button
-            className="btn btn-xs btn-link"
-            type="button"
-            onClick={() => setShowAll(false)}
-          >
+          <button className="btn btn-xs btn-link" type="button" onClick={() => setShowAll(false)}>
             Hide
           </button>
         )}
@@ -37,18 +33,14 @@ export default function DataPreview({ value }: { value: string }) {
   // Truncated preview
   return (
     <div className="max-w-full overflow-hidden">
-      <p className="break-all overflow-wrap-anywhere font-mono text-xs">
+      <p className="overflow-wrap-anywhere font-mono text-xs break-all">
         <b aria-label="The first 4 bytes determine the contract method that is being called">
           {value.slice(0, METHOD_SELECTOR_LEN)}
         </b>
         {value.slice(METHOD_SELECTOR_LEN, PREVIEW_LEN)}
         <span className="text-gray-400">…</span>
       </p>
-      <button
-        className="btn btn-xs btn-link"
-        type="button"
-        onClick={() => setShowAll(true)}
-      >
+      <button className="btn btn-xs btn-link" type="button" onClick={() => setShowAll(true)}>
         Show more
       </button>
     </div>

@@ -44,11 +44,7 @@ export default function Modal({
         {children}
         {showCloseButton && (
           <div className="mt-6 flex justify-center">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-            >
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               {closeLabel}
             </button>
           </div>

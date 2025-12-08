@@ -48,9 +48,7 @@ export default function ApiKeyModal({ open, onClose }: ApiKeyModalProps) {
       <h2 className="mb-4 text-2xl font-bold">CoinGecko API Settings</h2>
 
       <div className="mb-4">
-        <p className="mb-2 text-sm">
-          To display USD token prices, you need a CoinGecko API key.
-        </p>
+        <p className="mb-2 text-sm">To display USD token prices, you need a CoinGecko API key.</p>
         <p className="mb-4 text-sm opacity-70">
           Get your free API key at:{" "}
           <a
@@ -80,29 +78,17 @@ export default function ApiKeyModal({ open, onClose }: ApiKeyModalProps) {
         />
       </div>
 
-      {saved && (
-        <div className="alert alert-success mb-4">
-          API key saved successfully!
-        </div>
-      )}
+      {saved && <div className="alert alert-success mb-4">API key saved successfully!</div>}
 
       <div className="flex justify-between gap-2">
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={handleClear}
-          disabled={!apiKey}
-        >
+        <button className="btn btn-ghost btn-sm" onClick={handleClear} disabled={!apiKey}>
           Clear
         </button>
         <div className="flex gap-2">
           <button className="btn btn-sm" onClick={onClose}>
             Close
           </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleSave}
-            disabled={!apiKey.trim() || saved}
-          >
+          <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!apiKey.trim() || saved}>
             Save
           </button>
         </div>

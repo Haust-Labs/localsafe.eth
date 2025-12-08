@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicClient } from "wagmi";
 import { formatUnits } from "viem";
 import { fetchTokenPrice } from "@/app/utils/coingecko";
@@ -57,10 +57,7 @@ const ERC20_ABI = [
   },
 ] as const;
 
-export default function TokenBalancesSection({
-  safeAddress,
-  chainId,
-}: TokenBalancesSectionProps) {
+export default function TokenBalancesSection({ safeAddress, chainId }: TokenBalancesSectionProps) {
   const publicClient = usePublicClient();
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
@@ -102,6 +99,41 @@ export default function TokenBalancesSection({
     }
   }, [tokens, STORAGE_KEY]);
 
+  // Fetch USD prices for tokens
+  const fetchPrices = useCallback(
+    async (tokenBalances: TokenBalance[], apiKey: string) => {
+      setFetchingPrices(true);
+      try {
+        const pricePromises = tokenBalances.map(async (token) => {
+          const price = await fetchTokenPrice(token.address, chainId, apiKey);
+          return { address: token.address, price };
+        });
+
+        const prices = await Promise.all(pricePromises);
+
+        // Update balances with prices and calculated USD values
+        setBalances((prevBalances) =>
+          prevBalances.map((balance) => {
+            const priceData = prices.find((p) => p.address.toLowerCase() === balance.address.toLowerCase());
+            const usdPrice = priceData?.price ?? undefined;
+            const usdValue = usdPrice ? parseFloat(balance.balance) * usdPrice : undefined;
+
+            return {
+              ...balance,
+              usdPrice,
+              usdValue,
+            };
+          }),
+        );
+      } catch (err) {
+        console.error("Failed to fetch prices:", err);
+      } finally {
+        setFetchingPrices(false);
+      }
+    },
+    [chainId],
+  );
+
   // Fetch balances and prices when tokens change
   useEffect(() => {
     if (tokens.length === 0 || !publicClient) return;
@@ -140,43 +172,7 @@ export default function TokenBalancesSection({
     }
 
     fetchBalances();
-  }, [tokens, publicClient, safeAddress, chainId]);
-
-  // Fetch USD prices for tokens
-  async function fetchPrices(tokenBalances: TokenBalance[], apiKey: string) {
-    setFetchingPrices(true);
-    try {
-      const pricePromises = tokenBalances.map(async (token) => {
-        const price = await fetchTokenPrice(token.address, chainId, apiKey);
-        return { address: token.address, price };
-      });
-
-      const prices = await Promise.all(pricePromises);
-
-      // Update balances with prices and calculated USD values
-      setBalances((prevBalances) =>
-        prevBalances.map((balance) => {
-          const priceData = prices.find(
-            (p) => p.address.toLowerCase() === balance.address.toLowerCase()
-          );
-          const usdPrice = priceData?.price ?? undefined;
-          const usdValue = usdPrice
-            ? parseFloat(balance.balance) * usdPrice
-            : undefined;
-
-          return {
-            ...balance,
-            usdPrice,
-            usdValue,
-          };
-        })
-      );
-    } catch (err) {
-      console.error("Failed to fetch prices:", err);
-    } finally {
-      setFetchingPrices(false);
-    }
-  }
+  }, [tokens, publicClient, safeAddress, chainId, fetchPrices]);
 
   // Refresh prices manually
   function handleRefreshPrices() {
@@ -220,11 +216,13 @@ export default function TokenBalancesSection({
           abi: ERC20_ABI,
           functionName: "decimals",
         }),
-        publicClient.readContract({
-          address: newTokenAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: "name",
-        }).catch(() => ""),
+        publicClient
+          .readContract({
+            address: newTokenAddress as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: "name",
+          })
+          .catch(() => ""),
       ]);
 
       setTokens([
@@ -359,45 +357,24 @@ export default function TokenBalancesSection({
           </button>
           {balances.length > 0 && (
             <div className="tooltip" data-tip="Refresh Prices">
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={handleRefreshPrices}
-                disabled={fetchingPrices}
-              >
+              <button className="btn btn-ghost btn-sm" onClick={handleRefreshPrices} disabled={fetchingPrices}>
                 {fetchingPrices ? "⏳" : "🔄"}
               </button>
             </div>
           )}
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={handleOpenJsonEditor}
-            title="Edit token list as JSON"
-          >
+          <button className="btn btn-outline btn-sm" onClick={handleOpenJsonEditor} title="Edit token list as JSON">
             Edit JSON
           </button>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={handleExport}
-            disabled={tokens.length === 0}
-          >
+          <button className="btn btn-outline btn-sm" onClick={handleExport} disabled={tokens.length === 0}>
             Export
           </button>
           <button className="btn btn-outline btn-sm" onClick={handleImportClick}>
             Import
           </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setShowAddToken(!showAddToken)}
-          >
+          <button className="btn btn-primary btn-sm" onClick={() => setShowAddToken(!showAddToken)}>
             + Add Token
           </button>
-          <input
-            type="file"
-            className="hidden"
-            ref={fileInputRef}
-            accept=".json"
-            onChange={handleImportFile}
-          />
+          <input type="file" className="hidden" ref={fileInputRef} accept=".json" onChange={handleImportFile} />
         </div>
       </div>
 
@@ -413,11 +390,7 @@ export default function TokenBalancesSection({
               onChange={(e) => setNewTokenAddress(e.target.value)}
               autoFocus
             />
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleAddToken}
-              disabled={!newTokenAddress}
-            >
+            <button className="btn btn-primary btn-sm" onClick={handleAddToken} disabled={!newTokenAddress}>
               Add
             </button>
             <button
@@ -440,10 +413,7 @@ export default function TokenBalancesSection({
         <div className="alert alert-warning mb-4 text-sm">
           <span>
             Configure a CoinGecko API key to see USD prices.{" "}
-            <button
-              className="link link-primary"
-              onClick={() => setShowApiKeyModal(true)}
-            >
+            <button className="link link-primary" onClick={() => setShowApiKeyModal(true)}>
               Add API Key
             </button>
           </span>
@@ -563,12 +533,9 @@ export default function TokenBalancesSection({
       {showJsonEditor && (
         <div className="modal modal-open">
           <div className="modal-box max-w-4xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">Edit Token List (JSON)</h3>
-              <button
-                className="btn btn-ghost btn-sm btn-circle"
-                onClick={() => setShowJsonEditor(false)}
-              >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Edit Token List (JSON)</h3>
+              <button className="btn btn-ghost btn-sm btn-circle" onClick={() => setShowJsonEditor(false)}>
                 ✕
               </button>
             </div>
@@ -578,7 +545,7 @@ export default function TokenBalancesSection({
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                className="stroke-current shrink-0 w-6 h-6"
+                className="h-6 w-6 shrink-0 stroke-current"
               >
                 <path
                   strokeLinecap="round"
@@ -589,7 +556,10 @@ export default function TokenBalancesSection({
               </svg>
               <div className="text-sm">
                 <p className="font-semibold">Token List Format</p>
-                <p>Each token must have: address (string), symbol (string), decimals (number), and optionally name (string)</p>
+                <p>
+                  Each token must have: address (string), symbol (string), decimals (number), and optionally name
+                  (string)
+                </p>
               </div>
             </div>
 
@@ -608,16 +578,10 @@ export default function TokenBalancesSection({
             )}
 
             <div className="modal-action">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowJsonEditor(false)}
-              >
+              <button className="btn btn-ghost" onClick={() => setShowJsonEditor(false)}>
                 Cancel
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveJsonEditor}
-              >
+              <button className="btn btn-primary" onClick={handleSaveJsonEditor}>
                 Save Changes
               </button>
             </div>

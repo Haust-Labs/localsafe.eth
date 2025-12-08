@@ -15,11 +15,8 @@ export interface ImportSafeWalletModalProps {
  * @param {SafeWalletData | { error: string } | null} data - The imported SafeWallet data or an error object.
  * @returns A summary string of the SafeWallet data or an error message.
  */
-function getSafeWalletSummary(
-  data: SafeWalletData | { error: string } | null,
-): string {
-  if (!data || typeof data !== "object" || "error" in data)
-    return "No valid SafeWallet data.";
+function getSafeWalletSummary(data: SafeWalletData | { error: string } | null): string {
+  if (!data || typeof data !== "object" || "error" in data) return "No valid SafeWallet data.";
   let summary = "";
   try {
     // Address Book
@@ -73,8 +70,7 @@ export default function ImportSafeWalletModal({
       <>
         <div className="alert alert-warning mb-4 text-sm">
           <span>
-            <strong>Warning:</strong> This will replace all your current
-            SafeWallet data. This action cannot be undone.
+            <strong>Warning:</strong> This will replace all your current SafeWallet data. This action cannot be undone.
           </span>
         </div>
         <div className="bg-base-200 mb-4 w-full rounded border p-4 shadow">
@@ -88,17 +84,9 @@ export default function ImportSafeWalletModal({
           </button>
           <button
             className="btn btn-error"
-            disabled={
-              typeof importPreview !== "object" ||
-              importPreview === null ||
-              "error" in importPreview
-            }
+            disabled={typeof importPreview !== "object" || importPreview === null || "error" in importPreview}
             onClick={() => {
-              if (
-                importPreview &&
-                typeof importPreview === "object" &&
-                !("error" in importPreview)
-              ) {
+              if (importPreview && typeof importPreview === "object" && !("error" in importPreview)) {
                 setSafeWalletData(importPreview as SafeWalletData);
                 onClose();
               }

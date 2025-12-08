@@ -71,17 +71,35 @@ export default function NetworkModal({
    * @param state - The state of the network form to add or update.
    */
   function handleNetworkAdd(state: NetworkFormState) {
-    // Build contracts object with MultiSend addresses if provided
+    // Build contracts object with all Safe contract addresses if provided
     const contracts: Record<string, { address: `0x${string}` }> = {};
+
+    if (state.safeProxyFactoryAddress) {
+      contracts.safeProxyFactory = { address: state.safeProxyFactoryAddress as `0x${string}` };
+    }
+    if (state.safeSingletonAddress) {
+      contracts.safeSingleton = { address: state.safeSingletonAddress as `0x${string}` };
+    }
+    if (state.fallbackHandlerAddress) {
+      contracts.fallbackHandler = { address: state.fallbackHandlerAddress as `0x${string}` };
+    }
     if (state.multiSendAddress) {
-      contracts.multiSend = {
-        address: state.multiSendAddress as `0x${string}`,
-      };
+      contracts.multiSend = { address: state.multiSendAddress as `0x${string}` };
     }
     if (state.multiSendCallOnlyAddress) {
-      contracts.multiSendCallOnly = {
-        address: state.multiSendCallOnlyAddress as `0x${string}`,
-      };
+      contracts.multiSendCallOnly = { address: state.multiSendCallOnlyAddress as `0x${string}` };
+    }
+    if (state.signMessageLibAddress) {
+      contracts.signMessageLib = { address: state.signMessageLibAddress as `0x${string}` };
+    }
+    if (state.createCallAddress) {
+      contracts.createCall = { address: state.createCallAddress as `0x${string}` };
+    }
+    if (state.simulateTxAccessorAddress) {
+      contracts.simulateTxAccessor = { address: state.simulateTxAccessorAddress as `0x${string}` };
+    }
+    if (state.tokenCallbackHandlerAddress) {
+      contracts.tokenCallbackHandler = { address: state.tokenCallbackHandlerAddress as `0x${string}` };
     }
 
     addOrUpdateChain({
@@ -90,11 +108,11 @@ export default function NetworkModal({
       rpcUrls: { default: { http: [state.rpcUrl] } },
       blockExplorers: state.blockExplorerUrl
         ? {
-          default: {
-            name: state.blockExplorerName || "Explorer",
-            url: state.blockExplorerUrl,
-          },
-        }
+            default: {
+              name: state.blockExplorerName || "Explorer",
+              url: state.blockExplorerUrl,
+            },
+          }
         : undefined,
       nativeCurrency: state.nativeCurrency,
       contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
@@ -103,12 +121,7 @@ export default function NetworkModal({
   }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      showCloseButton={false}
-      testid="network-modal"
-    >
+    <Modal open={open} onClose={onClose} showCloseButton={false} testid="network-modal">
       <h2 className="mb-4 text-2xl font-bold">Manage Networks</h2>
       {showForm ? (
         <NetworkForm
@@ -120,18 +133,14 @@ export default function NetworkModal({
       ) : (
         <>
           <p>
-            Here you can manage your custom networks. You can add or remove
-            custom networks as needed.
+            Here you can manage your custom networks. You can add or remove custom networks as needed.
             <br />
             <span className="text-xs text-gray-400 italic">
-              Note: Adding a new network will take over any previously set
-              custom network with the same Chain ID.
+              Note: Adding a new network will take over any previously set custom network with the same Chain ID.
             </span>
           </p>
           <ul className="list bg-base-100 rounded-box max-h-64 overflow-y-auto shadow-md">
-            <li className="p-4 pb-2 text-xs tracking-wide opacity-60">
-              Your configured networks
-            </li>
+            <li className="p-4 pb-2 text-xs tracking-wide opacity-60">Your configured networks</li>
             {/* Conditional rendering of configured networks */}
             {configChains.length > 0 ? (
               configChains.map((chain) => {
@@ -144,9 +153,7 @@ export default function NetworkModal({
                     </div>
                     <div>
                       <div>{chain.name}</div>
-                      <div className="text-xs font-semibold uppercase opacity-60">
-                        Chain ID: {chain.id}
-                      </div>
+                      <div className="text-xs font-semibold uppercase opacity-60">Chain ID: {chain.id}</div>
                     </div>
                     {/* Edit network button */}
                     <div className="flex items-center gap-2">
@@ -154,18 +161,22 @@ export default function NetworkModal({
                         className="btn btn-square btn-ghost"
                         title={`Edit ${chain.name}`}
                         onClick={() => {
+                          const chainContracts = chain.contracts as Record<string, { address: string }> | undefined;
                           setEditChain({
                             id: chain.id,
                             name: chain.name,
                             rpcUrl: chain.rpcUrls?.default?.http?.[0] || "",
-                            blockExplorerUrl:
-                              chain.blockExplorers?.default?.url || "",
-                            blockExplorerName:
-                              chain.blockExplorers?.default?.name || "",
-                            multiSendAddress:
-                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSend?.address || "",
-                            multiSendCallOnlyAddress:
-                              (chain.contracts as Record<string, { address: string }> | undefined)?.multiSendCallOnly?.address || "",
+                            blockExplorerUrl: chain.blockExplorers?.default?.url || "",
+                            blockExplorerName: chain.blockExplorers?.default?.name || "",
+                            safeProxyFactoryAddress: chainContracts?.safeProxyFactory?.address || "",
+                            safeSingletonAddress: chainContracts?.safeSingleton?.address || "",
+                            fallbackHandlerAddress: chainContracts?.fallbackHandler?.address || "",
+                            multiSendAddress: chainContracts?.multiSend?.address || "",
+                            multiSendCallOnlyAddress: chainContracts?.multiSendCallOnly?.address || "",
+                            signMessageLibAddress: chainContracts?.signMessageLib?.address || "",
+                            createCallAddress: chainContracts?.createCall?.address || "",
+                            simulateTxAccessorAddress: chainContracts?.simulateTxAccessor?.address || "",
+                            tokenCallbackHandlerAddress: chainContracts?.tokenCallbackHandler?.address || "",
                             nativeCurrency: chain.nativeCurrency || {
                               name: "",
                               symbol: "",
@@ -180,11 +191,7 @@ export default function NetworkModal({
                       {/* Remove network button with tooltip if only one chain remains */}
                       <div
                         className="tooltip tooltip-left"
-                        data-tip={
-                          configChains.length === 1
-                            ? "One chain is required"
-                            : undefined
-                        }
+                        data-tip={configChains.length === 1 ? "One chain is required" : undefined}
                       >
                         <button
                           className="btn btn-square btn-ghost"
@@ -200,9 +207,7 @@ export default function NetworkModal({
                 );
               })
             ) : (
-              <li className="p-4 text-center text-sm opacity-60">
-                No custom networks added.
-              </li>
+              <li className="p-4 text-center text-sm opacity-60">No custom networks added.</li>
             )}
           </ul>
           {/* Add and Close buttons */}

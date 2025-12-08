@@ -64,9 +64,7 @@ export default function CustomConnectButton({
 
         // Get existing networks
         const existingNetworksStr = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
-        const existingNetworks = existingNetworksStr
-          ? JSON.parse(existingNetworksStr)
-          : [];
+        const existingNetworks = existingNetworksStr ? JSON.parse(existingNetworksStr) : [];
 
         // Merge networks, avoiding duplicates by chain ID
         // If a network with the same ID exists, keep the existing one
@@ -74,9 +72,7 @@ export default function CustomConnectButton({
         let addedCount = 0;
 
         importedNetworks.forEach((importedNet: NetworkFormState) => {
-          const exists = mergedNetworks.some(
-            (existingNet: NetworkFormState) => existingNet.id === importedNet.id
-          );
+          const exists = mergedNetworks.some((existingNet: NetworkFormState) => existingNet.id === importedNet.id);
           if (!exists) {
             mergedNetworks.push(importedNet);
             addedCount++;
@@ -84,15 +80,10 @@ export default function CustomConnectButton({
         });
 
         // Save merged networks to localStorage
-        localStorage.setItem(
-          WAGMI_CONFIG_NETWORKS_KEY,
-          JSON.stringify(mergedNetworks)
-        );
+        localStorage.setItem(WAGMI_CONFIG_NETWORKS_KEY, JSON.stringify(mergedNetworks));
 
         // Reload the page to apply changes
-        alert(
-          `${addedCount} network(s) imported successfully! Reloading page...`
-        );
+        alert(`${addedCount} network(s) imported successfully! Reloading page...`);
         window.location.reload();
       } catch (error) {
         console.error("Failed to import networks:", error);
@@ -110,21 +101,10 @@ export default function CustomConnectButton({
 
   return (
     <ConnectButton.Custom>
-      {({
-        account,
-        chain,
-        openAccountModal,
-        openChainModal,
-        openConnectModal,
-        authenticationStatus,
-        mounted,
-      }) => {
+      {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
         const ready = mounted && authenticationStatus !== "loading";
         const connected =
-          ready &&
-          account &&
-          chain &&
-          (!authenticationStatus || authenticationStatus === "authenticated");
+          ready && account && chain && (!authenticationStatus || authenticationStatus === "authenticated");
 
         return (
           <div
@@ -140,11 +120,7 @@ export default function CustomConnectButton({
             {(() => {
               if (!connected) {
                 return (
-                  <button
-                    onClick={openConnectModal}
-                    type="button"
-                    className="btn btn-primary btn-sm rounded"
-                  >
+                  <button onClick={openConnectModal} type="button" className="btn btn-primary btn-sm rounded">
                     Connect Wallet
                   </button>
                 );
@@ -152,11 +128,7 @@ export default function CustomConnectButton({
 
               if (chain.unsupported) {
                 return (
-                  <button
-                    onClick={openChainModal}
-                    type="button"
-                    className="btn btn-error btn-sm rounded"
-                  >
+                  <button onClick={openChainModal} type="button" className="btn btn-error btn-sm rounded">
                     Wrong network
                   </button>
                 );
@@ -182,7 +154,7 @@ export default function CustomConnectButton({
                               alt={chain.name ?? "Chain icon"}
                               src={chain.iconUrl}
                               className="h-5 w-5"
-                              onError={() => setImageErrors(prev => ({ ...prev, [chain.id]: true }))}
+                              onError={() => setImageErrors((prev) => ({ ...prev, [chain.id]: true }))}
                             />
                           </div>
                         ) : (
@@ -191,23 +163,13 @@ export default function CustomConnectButton({
                           </div>
                         )}
                         <span className="hidden sm:inline">{chain.name}</span>
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
                       <ul
                         tabIndex={0}
-                        className="menu dropdown-content bg-base-200 rounded-box z-[1] mt-3 w-52 border border-base-300 p-2 shadow"
+                        className="menu dropdown-content bg-base-200 rounded-box border-base-300 z-[1] mt-3 w-52 border p-2 shadow"
                       >
                         {/* RainbowKit's default chain switching */}
                         <li>
@@ -234,17 +196,8 @@ export default function CustomConnectButton({
                             }}
                             className="flex items-center gap-2"
                           >
-                            {showNetworkFormIndicator && (
-                              <span className="badge badge-warning badge-xs">
-                                New
-                              </span>
-                            )}
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
+                            {showNetworkFormIndicator && <span className="badge badge-warning badge-xs">New</span>}
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -266,16 +219,8 @@ export default function CustomConnectButton({
 
                         {/* Export Networks */}
                         <li>
-                          <button
-                            onClick={handleExportNetworks}
-                            className="flex items-center gap-2"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
+                          <button onClick={handleExportNetworks} className="flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -289,16 +234,8 @@ export default function CustomConnectButton({
 
                         {/* Import Networks */}
                         <li>
-                          <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
+                          <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -327,17 +264,9 @@ export default function CustomConnectButton({
                     type="button"
                     className="btn btn-ghost btn-sm flex items-center gap-2 rounded"
                   >
-                    <span className="hidden md:inline">
-                      {account.displayName}
-                    </span>
-                    <span className="md:hidden">
-                      {account.displayName.split(" ")[0]}
-                    </span>
-                    {account.displayBalance && (
-                      <span className="hidden lg:inline">
-                        ({account.displayBalance})
-                      </span>
-                    )}
+                    <span className="hidden md:inline">{account.displayName}</span>
+                    <span className="md:hidden">{account.displayName.split(" ")[0]}</span>
+                    {account.displayBalance && <span className="hidden lg:inline">({account.displayBalance})</span>}
                   </button>
                 </div>
               );

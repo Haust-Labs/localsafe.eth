@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
+import { useToast } from "@/app/hooks/useToast";
+import { useConfirm } from "@/app/hooks/useToast";
 
 interface StorageItem {
   key: string;
   value: string;
-  parsed: any;
+  parsed: unknown;
   isValid: boolean;
 }
 
@@ -21,8 +23,18 @@ const KNOWN_KEYS = [
   { key: "coingecko-price-cache", description: "Cached token prices" },
 ];
 
+// Keys that require a page reload to take effect
+const KEYS_REQUIRING_RELOAD = [
+  "MSIG_wagmiConfigNetworks",
+  "MSIGUI_safeWalletData",
+  "walletconnect-project-id",
+  "MSIGUI_safeCurrentTxMap",
+];
+
 export default function AdvancedSettingsClient() {
   const navigate = useNavigate();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [storageItems, setStorageItems] = useState<StorageItem[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -43,7 +55,7 @@ export default function AdvancedSettingsClient() {
       if (!key) continue;
 
       const value = localStorage.getItem(key) || "";
-      let parsed: any = value;
+      let parsed: unknown = value;
       let isValid = true;
 
       // Try to parse as JSON
@@ -70,12 +82,13 @@ export default function AdvancedSettingsClient() {
     setStorageItems(items);
   };
 
-  const handleEdit = (key: string, value: string) => {
+  const handleEdit = (key: string, value: string, isValid: boolean, parsed: unknown) => {
     setEditingKey(key);
-    setEditValue(value);
+    // If it's valid JSON, format it with indentation; otherwise use raw value
+    setEditValue(isValid ? JSON.stringify(parsed, null, 2) : value);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingKey) return;
 
     try {
@@ -89,21 +102,37 @@ export default function AdvancedSettingsClient() {
       setEditingKey(null);
       setEditValue("");
       loadStorage();
-      alert("Saved successfully! Refresh the page for changes to take effect.");
+
+      // Check if this key requires a page reload to take effect
+      if (KEYS_REQUIRING_RELOAD.includes(editingKey)) {
+        const confirmed = await confirm(
+          "Settings saved! The page will reload to apply changes. Continue?",
+          "Reload Required",
+        );
+        if (confirmed) {
+          window.location.reload();
+        } else {
+          toast.warning("Settings saved, but you'll need to manually refresh the page for changes to take effect.");
+        }
+      } else {
+        toast.success("Settings saved successfully!");
+      }
     } catch (error) {
-      alert(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
-  const handleDelete = (key: string) => {
-    if (!confirm(`Are you sure you want to delete "${key}"?`)) return;
+  const handleDelete = async (key: string) => {
+    const confirmed = await confirm(`Are you sure you want to delete "${key}"?`, "Delete Confirmation");
+    if (!confirmed) return;
 
     localStorage.removeItem(key);
     loadStorage();
+    toast.success(`Deleted "${key}" successfully`);
   };
 
   const handleExportAll = () => {
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     storageItems.forEach((item) => {
       data[item.key] = item.isValid ? item.parsed : item.value;
     });
@@ -122,18 +151,20 @@ export default function AdvancedSettingsClient() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json";
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const data = JSON.parse(event.target?.result as string);
 
-          if (!confirm(`This will overwrite ${Object.keys(data).length} localStorage items. Continue?`)) {
-            return;
-          }
+          const confirmed = await confirm(
+            `This will overwrite ${Object.keys(data).length} localStorage items. Continue?`,
+            "Import Confirmation",
+          );
+          if (!confirmed) return;
 
           Object.entries(data).forEach(([key, value]) => {
             const stringValue = typeof value === "string" ? value : JSON.stringify(value);
@@ -141,9 +172,9 @@ export default function AdvancedSettingsClient() {
           });
 
           loadStorage();
-          alert("Import successful! Refresh the page for changes to take effect.");
+          toast.success("Import successful! Refresh the page for changes to take effect.");
         } catch (error) {
-          alert(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       };
       reader.readAsText(file);
@@ -151,24 +182,28 @@ export default function AdvancedSettingsClient() {
     input.click();
   };
 
-  const handleClearAll = () => {
-    if (!confirm("Are you sure you want to clear ALL localStorage data? This cannot be undone!")) {
-      return;
-    }
+  const handleClearAll = async () => {
+    const firstConfirm = await confirm(
+      "Are you sure you want to clear ALL localStorage data? This cannot be undone!",
+      "Clear All Data",
+    );
+    if (!firstConfirm) return;
 
-    if (!confirm("This will delete all your wallets, transactions, and settings. Are you ABSOLUTELY sure?")) {
-      return;
-    }
+    const secondConfirm = await confirm(
+      "This will delete all your wallets, transactions, and settings. Are you ABSOLUTELY sure?",
+      "Final Warning",
+    );
+    if (!secondConfirm) return;
 
     localStorage.clear();
     loadStorage();
-    alert("All data cleared. Refresh the page.");
+    toast.success("All data cleared. Refresh the page.");
   };
 
   const filteredItems = storageItems.filter(
     (item) =>
       item.key.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      item.value.toLowerCase().includes(searchFilter.toLowerCase())
+      item.value.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
   return (
@@ -184,7 +219,7 @@ export default function AdvancedSettingsClient() {
           <div className="alert alert-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
+              className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
             >
@@ -198,8 +233,8 @@ export default function AdvancedSettingsClient() {
             <div>
               <h3 className="font-bold">Caution: Advanced Users Only</h3>
               <div className="text-sm">
-                Editing these values directly can break the application. Always export your data
-                before making changes. After editing, refresh the page for changes to take effect.
+                Editing these values directly can break the application. Always export your data before making changes.
+                Some settings will automatically reload the page to apply changes.
               </div>
             </div>
           </div>
@@ -239,24 +274,19 @@ export default function AdvancedSettingsClient() {
                   <div className="card-body p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <h3 className="font-bold font-mono text-sm break-all">{item.key}</h3>
-                        {knownKey && (
-                          <p className="text-xs text-gray-500 mt-1">{knownKey.description}</p>
-                        )}
+                        <h3 className="font-mono text-sm font-bold break-all">{item.key}</h3>
+                        {knownKey && <p className="mt-1 text-xs text-gray-500">{knownKey.description}</p>}
                       </div>
                       <div className="flex gap-2">
                         {!isEditing ? (
                           <>
                             <button
                               className="btn btn-ghost btn-xs"
-                              onClick={() => handleEdit(item.key, item.value)}
+                              onClick={() => handleEdit(item.key, item.value, item.isValid, item.parsed)}
                             >
                               Edit
                             </button>
-                            <button
-                              className="btn btn-ghost btn-xs text-error"
-                              onClick={() => handleDelete(item.key)}
-                            >
+                            <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(item.key)}>
                               Delete
                             </button>
                           </>
@@ -282,21 +312,19 @@ export default function AdvancedSettingsClient() {
                     <div className="mt-2">
                       {isEditing ? (
                         <textarea
-                          className="textarea textarea-bordered w-full font-mono text-xs"
+                          className="textarea textarea-bordered min-h-64 w-full p-3 font-mono text-xs"
                           rows={10}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                         />
                       ) : (
-                        <pre className="bg-base-300 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">
-                          {item.isValid
-                            ? JSON.stringify(item.parsed, null, 2)
-                            : item.value}
+                        <pre className="bg-base-300 max-h-64 overflow-x-auto overflow-y-auto rounded p-3 text-xs">
+                          {item.isValid ? JSON.stringify(item.parsed, null, 2) : item.value}
                         </pre>
                       )}
                     </div>
 
-                    <div className="text-xs text-gray-500 mt-2">
+                    <div className="mt-2 text-xs text-gray-500">
                       Size: {new Blob([item.value]).size} bytes
                       {item.isValid && " • Valid JSON"}
                     </div>
@@ -307,7 +335,7 @@ export default function AdvancedSettingsClient() {
           </div>
 
           {filteredItems.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="py-8 text-center text-gray-500">
               {searchFilter ? "No items match your search" : "No localStorage data found"}
             </div>
           )}

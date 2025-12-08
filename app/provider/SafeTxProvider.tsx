@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  EthSafeSignature,
-  EthSafeTransaction,
-} from "@safe-global/protocol-kit";
+import { EthSafeSignature, EthSafeTransaction } from "@safe-global/protocol-kit";
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { SAFE_TX_STORAGE_KEY } from "../utils/constants";
 
@@ -18,9 +15,7 @@ export interface SafeTxContextType {
 
 const SafeTxContext = createContext<SafeTxContextType | undefined>(undefined);
 
-export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // In-memory map of current transactions per safeAddress (now stores arrays)
   const currentTxMapRef = useRef<{
     [safeAddress: string]: EthSafeTransaction[];
@@ -45,20 +40,10 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
               if (parsed && typeof parsed === "object" && "data" in parsed) {
                 const txObj = new EthSafeTransaction(parsed.data);
                 if (parsed.signatures && Array.isArray(parsed.signatures)) {
-                  parsed.signatures.forEach(
-                    (sig: {
-                      signer: string;
-                      data: string;
-                      isContractSignature: boolean;
-                    }) => {
-                      const ethSignature = new EthSafeSignature(
-                        sig.signer,
-                        sig.data,
-                        sig.isContractSignature,
-                      );
-                      txObj.addSignature(ethSignature);
-                    },
-                  );
+                  parsed.signatures.forEach((sig: { signer: string; data: string; isContractSignature: boolean }) => {
+                    const ethSignature = new EthSafeSignature(sig.signer, sig.data, sig.isContractSignature);
+                    txObj.addSignature(ethSignature);
+                  });
                 }
                 transactions.push(txObj);
               }
@@ -81,9 +66,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
     const existingTxs = currentTxMapRef.current[key] || [];
 
     // Check if transaction with same nonce already exists
-    const existingIndex = existingTxs.findIndex(
-      (tx) => tx.data.nonce === txObj.data.nonce
-    );
+    const existingIndex = existingTxs.findIndex((tx) => tx.data.nonce === txObj.data.nonce);
 
     if (existingIndex >= 0) {
       // Update existing transaction
@@ -117,7 +100,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
   function getTransaction(safeAddress: string, chainId?: string): EthSafeTransaction | null {
     const key = chainId ? `${safeAddress}-${chainId}` : safeAddress;
     const txs = currentTxMapRef.current[key];
-    return (txs && txs.length > 0) ? txs[0] : null;
+    return txs && txs.length > 0 ? txs[0] : null;
   }
 
   // Get all transactions for a specific safeAddress and chainId, sorted by nonce
@@ -148,9 +131,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
       const existingTxs = currentTxMapRef.current[key] || [];
 
       // Filter by nonce if provided, otherwise we can't reliably remove
-      const filtered = nonce !== undefined
-        ? existingTxs.filter((tx) => Number(tx.data.nonce) !== nonce)
-        : existingTxs;
+      const filtered = nonce !== undefined ? existingTxs.filter((tx) => Number(tx.data.nonce) !== nonce) : existingTxs;
 
       currentTxMapRef.current[key] = filtered;
 
@@ -206,20 +187,10 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
           if (storedTx.data) {
             const txObj = new EthSafeTransaction(storedTx.data);
             if (storedTx.signatures && Array.isArray(storedTx.signatures)) {
-              storedTx.signatures.forEach(
-                (sig: {
-                  signer: string;
-                  data: string;
-                  isContractSignature: boolean;
-                }) => {
-                  const ethSignature = new EthSafeSignature(
-                    sig.signer,
-                    sig.data,
-                    sig.isContractSignature,
-                  );
-                  txObj.addSignature(ethSignature);
-                },
-              );
+              storedTx.signatures.forEach((sig: { signer: string; data: string; isContractSignature: boolean }) => {
+                const ethSignature = new EthSafeSignature(sig.signer, sig.data, sig.isContractSignature);
+                txObj.addSignature(ethSignature);
+              });
             }
             transactions.push(txObj);
           }
@@ -229,20 +200,10 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
       else if (obj.tx && obj.tx.data) {
         const txObj = new EthSafeTransaction(obj.tx.data);
         if (obj.tx.signatures && Array.isArray(obj.tx.signatures)) {
-          obj.tx.signatures.forEach(
-            (sig: {
-              signer: string;
-              data: string;
-              isContractSignature: boolean;
-            }) => {
-              const ethSignature = new EthSafeSignature(
-                sig.signer,
-                sig.data,
-                sig.isContractSignature,
-              );
-              txObj.addSignature(ethSignature);
-            },
-          );
+          obj.tx.signatures.forEach((sig: { signer: string; data: string; isContractSignature: boolean }) => {
+            const ethSignature = new EthSafeSignature(sig.signer, sig.data, sig.isContractSignature);
+            txObj.addSignature(ethSignature);
+          });
         }
         transactions.push(txObj);
       }
@@ -254,9 +215,7 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // For each imported transaction, add or replace by nonce
         transactions.forEach((importedTx) => {
-          const existingIndex = mergedTxs.findIndex(
-            (tx) => Number(tx.data.nonce) === Number(importedTx.data.nonce)
-          );
+          const existingIndex = mergedTxs.findIndex((tx) => Number(tx.data.nonce) === Number(importedTx.data.nonce));
           if (existingIndex >= 0) {
             // Replace existing transaction with same nonce
             mergedTxs[existingIndex] = importedTx;
@@ -306,7 +265,6 @@ export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export function useSafeTxContext() {
   const ctx = useContext(SafeTxContext);
-  if (!ctx)
-    throw new Error("useSafeTxContext must be used within a SafeTxProvider");
+  if (!ctx) throw new Error("useSafeTxContext must be used within a SafeTxProvider");
   return ctx;
 }

@@ -17,13 +17,7 @@ interface AppCardProps {
  * @param {string} [testid] - Optional test ID for testing purposes.
  * @returns A styled card component with optional title and actions.
  */
-export default function AppCard({
-  children,
-  className,
-  title,
-  actions,
-  testid,
-}: AppCardProps) {
+export default function AppCard({ children, className, title, actions, testid }: AppCardProps) {
   return (
     <div
       className={
