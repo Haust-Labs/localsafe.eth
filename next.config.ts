@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: true,
-  assetPrefix: "./",
   images: {
     unoptimized: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: "standalone",
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default nextConfig;

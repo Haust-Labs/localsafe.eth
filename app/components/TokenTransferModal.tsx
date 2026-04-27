@@ -238,7 +238,7 @@ export default function TokenTransferModal({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <button className="btn btn-outline btn-sm" onClick={handleMaxClick}>
+          <button className="btn btn-sm" onClick={handleMaxClick}>
             Max
           </button>
         </div>

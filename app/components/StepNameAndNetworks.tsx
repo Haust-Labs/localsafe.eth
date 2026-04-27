@@ -86,7 +86,7 @@ export default function StepNameAndNetworks({
               <input
                 key={chainObj.id}
                 type="button"
-                className={`btn btn-sm rounded ${selected ? "btn-accent" : "btn-outline"}`}
+                className={`btn btn-sm ${selected ? "btn-accent" : "btn-ghost"}`}
                 value={chainObj.name}
                 aria-label={chainObj.name}
                 onClick={() => toggleChain(chainObj)}

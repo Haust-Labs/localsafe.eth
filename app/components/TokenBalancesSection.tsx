@@ -362,13 +362,13 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
               </button>
             </div>
           )}
-          <button className="btn btn-outline btn-sm" onClick={handleOpenJsonEditor} title="Edit token list as JSON">
+          <button className="btn btn-sm" onClick={handleOpenJsonEditor} title="Edit token list as JSON">
             Edit JSON
           </button>
-          <button className="btn btn-outline btn-sm" onClick={handleExport} disabled={tokens.length === 0}>
+          <button className="btn btn-sm" onClick={handleExport} disabled={tokens.length === 0}>
             Export
           </button>
-          <button className="btn btn-outline btn-sm" onClick={handleImportClick}>
+          <button className="btn btn-sm" onClick={handleImportClick}>
             Import
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddToken(!showAddToken)}>

@@ -1,0 +1,49 @@
+/*
+  ============================================================
+  HAUST COLOR TOKENS — generated from Design System editor
+  Paste into app/colors.css
+  ============================================================
+*/
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+[data-theme="haust"] {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --color-base-100: oklch(0% 0 0);
+  --color-base-200: oklch(19.04% 0.0069 258.37);
+  --color-base-300: oklch(26.71% 0.0126 258.37);
+  --color-base-content: oklch(83.92% 0.0177 256.29);
+
+  /* Brand */
+  --color-primary: oklch(90.83% 0.1438 188.93);
+  --color-primary-content: oklch(0% 0 0);
+  --color-secondary: oklch(100% 0 0);
+  --color-secondary-content: oklch(0% 0 0);
+  --color-accent: oklch(70.67% 0.2326 316.25);
+  --color-accent-content: oklch(0% 0 0);
+
+  /* Neutral */
+  --color-neutral: oklch(32.52% 0.0121 243.2);
+  --color-neutral-content: oklch(92.03% 0.008 253.86);
+
+  /* Semantic */
+  --color-info: oklch(68.71% 0.1707 250.7);
+  --color-info-content: oklch(0% 0 0);
+  --color-success: oklch(77.27% 0.2029 152.08);
+  --color-success-content: oklch(0% 0 0);
+  --color-warning: oklch(93.11% 0.1754 102.59);
+  --color-warning-content: oklch(0% 0 0);
+  --color-error: oklch(68.77% 0.2081 10.35);
+  --color-error-content: oklch(0% 0 0);
+
+  /* Shape */
+  --radius-selector: 0.5rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+
+  /* Border */
+  --border: 1px;
+}

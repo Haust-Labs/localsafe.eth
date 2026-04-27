@@ -67,7 +67,7 @@ export default function StepSigners({
           <button type="button" className="btn btn-secondary" onClick={() => onBack()}>
             Back to Networks
           </button>
-          <button type="button" className="btn btn-primary rounded" onClick={onNext} disabled={isNextDisabled}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={onNext} disabled={isNextDisabled}>
             Next
           </button>
         </>
@@ -91,7 +91,7 @@ export default function StepSigners({
                 data-testid={`signer-input-${idx}`}
               />
               {signers.length > 1 && (
-                <button type="button" className="btn btn-outline btn-secondary" onClick={() => removeSignerField(idx)}>
+                <button type="button" className="btn btn-secondary" onClick={() => removeSignerField(idx)}>
                   -
                 </button>
               )}

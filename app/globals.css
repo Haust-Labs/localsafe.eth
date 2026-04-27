@@ -1,20 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes:
-    light --default,
-    dark --prefersdark;
-  exclude: rootscrollgutter;
-}
+@import "./colors.css";
 
-body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif;
+@plugin "daisyui" {
+  themes: haust --default;
+  exclude: rootscrollgutter;
 }
 
 /* https://github.com/rainbow-me/rainbowkit/issues/1546 */
 body > [data-rk] {
   @apply flex min-h-screen flex-col;
+}
+
+/* ===========================================
+   HAUST DESIGN SYSTEM — компонентные оверрайды
+   =========================================== */
+
+/* --- Кнопки: скругление 12px принудительно ---
+   DaisyUI читает --radius-field, но :root из themes.css
+   перезаписывает токен. Ставим напрямую.              */
+.btn:not(.btn-circle):not(.btn-square) {
+  border-radius: 0.75rem;
+}
+
+/* --- Семантические компоненты: прозрачный фон ---
+   Применяется к badge, alert, toast.
+   Фон 12% от цвета, текст — сам цвет, рамка 35%.    */
+
+/* primary */
+.badge-primary {
+  background-color: color-mix(in oklch, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  border-color: color-mix(in oklch, var(--color-primary) 35%, transparent);
+  border-width: 1px;
+}
+/* accent */
+.badge-accent {
+  background-color: color-mix(in oklch, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in oklch, var(--color-accent) 35%, transparent);
+  border-width: 1px;
+}
+/* info */
+.badge-info,
+.alert-info {
+  background-color: color-mix(in oklch, var(--color-info) 12%, transparent);
+  color: var(--color-info);
+  border-color: color-mix(in oklch, var(--color-info) 35%, transparent);
+  border-width: 1px;
+}
+/* success */
+.badge-success,
+.alert-success {
+  background-color: color-mix(in oklch, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+  border-color: color-mix(in oklch, var(--color-success) 35%, transparent);
+  border-width: 1px;
+}
+/* warning */
+.badge-warning,
+.alert-warning {
+  background-color: color-mix(in oklch, var(--color-warning) 12%, transparent);
+  color: var(--color-warning);
+  border-color: color-mix(in oklch, var(--color-warning) 35%, transparent);
+  border-width: 1px;
+}
+/* error */
+.badge-error,
+.alert-error {
+  background-color: color-mix(in oklch, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+  border-color: color-mix(in oklch, var(--color-error) 35%, transparent);
+  border-width: 1px;
+}
+
+/* badge-outline — убираем отдельную обводку, единый стиль выше */
+.badge-outline {
+  background-color: transparent;
+  border-width: 1px;
+}
+
+/* --- Код-блоки: скругление + заливка чуть светлее карточек ---
+   Карточки: bg-base-200. Код внутри: bg-base-300 (чуть светлее).  */
+pre {
+  background-color: var(--color-base-300);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Инлайн код */
+:not(pre) > code {
+  background-color: var(--color-base-300);
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8em;
+}
+
+/* --- Степпер: текст внутри кружков = цвет фона (чёрный) --- */
+.steps .step-primary::after,
+.steps .step-success::after,
+.steps .step-error::after,
+.steps .step-warning::after,
+.steps .step-info::after {
+  color: oklch(0% 0 0);
 }
 
 /* Toast slide-in animation */

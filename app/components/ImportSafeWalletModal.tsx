@@ -79,7 +79,7 @@ export default function ImportSafeWalletModal({
           </pre>
         </div>
         <div className="flex justify-end gap-2">
-          <button className="btn btn-outline" onClick={onClose}>
+          <button className="btn" onClick={onClose}>
             Cancel
           </button>
           <button
