@@ -125,7 +125,13 @@ pre {
   border: 1px solid var(--color-modal-border);
 }
 
-/* Stepper: use -content token per state instead of hardcoded black */
+/* Stepper: inactive circles filled with base-200 (same across all step components) */
+.steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info)::after {
+  background-color: var(--color-base-200);
+  color: var(--color-base-content);
+}
+
+/* Stepper: active/semantic states use matching -content token for text */
 .steps .step-primary::after  { color: var(--color-primary-content); }
 .steps .step-success::after  { color: var(--color-success-content); }
 .steps .step-error::after    { color: var(--color-error-content); }

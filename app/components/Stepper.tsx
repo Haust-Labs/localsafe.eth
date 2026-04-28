@@ -15,17 +15,7 @@ interface StepperProps {
 const Stepper: React.FC<StepperProps> = ({ steps, currentStep }) => (
   <ul className="steps col-span-4">
     {steps.map((label, idx) => (
-      <li
-        key={label}
-        className={
-          "text-base-content step text-sm" +
-          (idx < currentStep
-            ? " step-primary"
-            : idx === currentStep
-              ? " step-primary"
-              : " after:!bg-base-100 before:!bg-base-100")
-        }
-      >
+      <li key={label} className={"text-base-content step text-sm" + (idx <= currentStep ? " step-primary" : "")}>
         {label}
       </li>
     ))}
