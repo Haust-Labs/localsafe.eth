@@ -73,7 +73,7 @@ export default function StepNameAndNetworks({
         <legend className="fieldset-legend">Networks</legend>
         <form className="flex flex-wrap gap-2" onSubmit={(e) => e.preventDefault()}>
           <input
-            className="btn btn-square btn-sm"
+            className="btn btn-ghost btn-square btn-sm"
             type="reset"
             value="×"
             aria-label="Reset selection"
@@ -86,7 +86,7 @@ export default function StepNameAndNetworks({
               <input
                 key={chainObj.id}
                 type="button"
-                className={`btn btn-sm ${selected ? "btn-accent" : "btn-ghost"}`}
+                className={`btn btn-sm ${selected ? "btn-secondary" : "btn-ghost"}`}
                 value={chainObj.name}
                 aria-label={chainObj.name}
                 onClick={() => toggleChain(chainObj)}

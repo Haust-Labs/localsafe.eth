@@ -21,9 +21,20 @@ body > [data-rk] {
 
 /* Buttons: force 12px radius.
    DaisyUI reads --radius-field, but :root from themes.css
-   overrides the token, so we set this directly. */
-.btn:not(.btn-circle):not(.btn-square) {
+   overrides the token, so we set this directly.
+   input.btn (type=button/reset) also needs explicit override. */
+.btn:not(.btn-circle):not(.btn-square),
+input.btn:not(.btn-circle):not(.btn-square) {
   border-radius: 0.75rem;
+}
+
+/* Inputs: suppress browser autofill background (webkit blue/grey fill) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-base-200) inset !important;
+  -webkit-text-fill-color: var(--color-base-content) !important;
+  caret-color: var(--color-base-content);
 }
 
 /* Semantic components: transparent fill.
