@@ -4,10 +4,10 @@ import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
-import { useSafeWalletContext } from "../provider/SafeWalletProvider";
+import { useSafeWalletContext } from "../../provider/SafeWalletProvider";
 import { useChains, useSwitchChain } from "wagmi";
-import { SafeWalletData } from "../utils/types";
-import ImportSafeWalletModal from "../components/ImportSafeWalletModal";
+import { SafeWalletData } from "../../utils/types";
+import ImportSafeWalletModal from "../../components/ImportSafeWalletModal";
 
 /**
  * Accounts Page Component

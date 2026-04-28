@@ -63,7 +63,7 @@ export default function ImportSafeTxModal({ open, onClose, importPreview, onRepl
         </pre>
       </div>
       <div className="flex justify-end gap-2" data-testid="safe-dashboard-import-tx-modal-actions">
-        <button className="btn btn-outline" data-testid="safe-dashboard-import-tx-modal-cancel-btn" onClick={onClose}>
+        <button className="btn" data-testid="safe-dashboard-import-tx-modal-cancel-btn" onClick={onClose}>
           Cancel
         </button>
         <button

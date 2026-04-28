@@ -2,17 +2,14 @@
 
 import Image from "next/image";
 import GithubSvg from "../assets/svg/GithubSvg";
-import poweredByCyfrinDark from "../assets/svg/powered-by-cyfrin-dark.png";
 import poweredByCyfrinBright from "../assets/svg/powered-by-cyfrin-bright.png";
 import packageJson from "../../package.json";
-import { useTheme } from "../provider/ThemeProvider";
 
 export default function Footer() {
-  const { isDarkMode } = useTheme();
   const version = process.env.NEXT_PUBLIC_APP_VERSION || packageJson.version || "0.0.0";
 
   return (
-    <footer className="footer bg-base-200 border-base-100 w-full border-t px-4 py-4">
+    <footer className="footer bg-base-100 w-full border-t border-white/20 px-4 py-4">
       <div className="container mx-auto flex items-center justify-between">
         {/* Left side - empty for now */}
         <div className="flex-1"></div>
@@ -25,7 +22,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="transition-opacity hover:opacity-80"
           >
-            <Image src={isDarkMode ? poweredByCyfrinBright : poweredByCyfrinDark} alt="Powered by Cyfrin" height={32} />
+            <Image src={poweredByCyfrinBright} alt="Powered by Cyfrin" height={32} />
           </a>
         </div>
 

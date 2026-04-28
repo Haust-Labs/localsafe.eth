@@ -7,18 +7,15 @@ import CustomConnectButton from "./CustomConnectButton";
 import { useAccount } from "wagmi";
 import { useChainManager } from "../hooks/useChainManager";
 import { NetworkFormState } from "../utils/types";
-import SunSvg from "../assets/svg/SunSvg";
-import MoonSvg from "../assets/svg/MoonSvg";
 import WalletConnectSvg from "../assets/svg/WalletConnectSvg";
+import HaustSafeLogo from "../assets/custom/HaustSafeLogo";
 import { useWalletConnect } from "../provider/WalletConnectProvider";
 import WalletConnectModal from "./WalletConnectModal";
-import { useTheme } from "../provider/ThemeProvider";
 
 export default function NavBar() {
   const { isConnected, chain, connector } = useAccount();
   const { configChains, getViemChainFromId } = useChainManager();
   const { sessions, pendingProposal } = useWalletConnect();
-  const { isDarkMode, setIsDarkMode } = useTheme();
 
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
   const [wcModalOpen, setWcModalOpen] = useState(false);
@@ -83,10 +80,10 @@ export default function NavBar() {
   }, [checkChain]);
 
   return (
-    <nav className="navbar bg-base-200 border-base-100 sticky top-0 z-20 w-full justify-between border-b px-1 sm:px-4">
+    <nav className="navbar bg-base-100 sticky top-0 z-20 w-full justify-between border-b border-white/20 px-1 sm:px-4">
       <div className="flex items-center">
-        <Link className="mx-2 px-2 text-sm font-bold sm:text-xl" to="/accounts">
-          localsafe.eth
+        <Link className="mx-2 px-2" to="/accounts">
+          <HaustSafeLogo className="h-5 w-auto" />
         </Link>
       </div>
       <div className="flex items-center">
@@ -115,18 +112,6 @@ export default function NavBar() {
             </div>
           )}
         </button>
-        <div className="divider divider-horizontal mx-1"></div>
-        <label className="swap swap-rotate">
-          <input
-            type="checkbox"
-            className="theme-controller"
-            value="dark"
-            checked={isDarkMode}
-            onChange={() => setIsDarkMode(!isDarkMode)}
-          />
-          <SunSvg />
-          <MoonSvg />
-        </label>
         <div className="divider divider-horizontal mx-1"></div>
         <CustomConnectButton
           onOpenNetworkModal={handleOpenNetworkModal}

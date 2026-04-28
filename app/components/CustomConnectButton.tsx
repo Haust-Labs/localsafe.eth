@@ -120,7 +120,7 @@ export default function CustomConnectButton({
             {(() => {
               if (!connected) {
                 return (
-                  <button onClick={openConnectModal} type="button" className="btn btn-primary btn-sm rounded">
+                  <button onClick={openConnectModal} type="button" className="btn btn-primary btn-sm">
                     Connect Wallet
                   </button>
                 );
@@ -128,7 +128,7 @@ export default function CustomConnectButton({
 
               if (chain.unsupported) {
                 return (
-                  <button onClick={openChainModal} type="button" className="btn btn-error btn-sm rounded">
+                  <button onClick={openChainModal} type="button" className="btn btn-error btn-sm">
                     Wrong network
                   </button>
                 );
@@ -142,7 +142,7 @@ export default function CustomConnectButton({
                       <div
                         tabIndex={0}
                         role="button"
-                        className="btn btn-ghost btn-sm flex items-center gap-2 rounded"
+                        className="btn btn-ghost btn-sm flex items-center gap-2"
                         onClick={() => setIsChainMenuOpen(!isChainMenuOpen)}
                       >
                         {chain.hasIcon && chain.iconUrl && !imageErrors[chain.id] ? (
@@ -262,7 +262,7 @@ export default function CustomConnectButton({
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="btn btn-ghost btn-sm flex items-center gap-2 rounded"
+                    className="btn btn-ghost btn-sm flex items-center gap-2"
                   >
                     <span className="hidden md:inline">{account.displayName}</span>
                     <span className="md:hidden">{account.displayName.split(" ")[0]}</span>

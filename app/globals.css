@@ -1,21 +1,144 @@
 @import "tailwindcss";
+@import "./colors.css";
+
 @plugin "daisyui" {
-  themes:
-    light --default,
-    dark --prefersdark;
+  themes: haust --default;
   exclude: rootscrollgutter;
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 /* https://github.com/rainbow-me/rainbowkit/issues/1546 */
 body > [data-rk] {
   @apply flex min-h-screen flex-col;
 }
+
+/* ===========================================
+   HAUST DESIGN SYSTEM — component overrides
+   =========================================== */
+
+/* Buttons: force 12px radius.
+   DaisyUI reads --radius-field, but :root from themes.css
+   overrides the token, so we set this directly.
+   input.btn (type=button/reset) also needs explicit override. */
+.btn:not(.btn-circle),
+input.btn:not(.btn-circle) {
+  border-radius: 0.75rem;
+}
+
+/* Inputs: background stays the same when filled or autofilled; only text color changes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-base-100) inset !important;
+  -webkit-text-fill-color: var(--color-base-content) !important;
+  caret-color: var(--color-base-content);
+}
+
+.input:not(:placeholder-shown) {
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+/* Semantic components: transparent fill.
+   Applies to badge, alert, toast.
+   Background 12% of color, text = color, border 35%. */
+
+/* primary */
+.badge-primary {
+  background-color: color-mix(in oklch, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  border-color: color-mix(in oklch, var(--color-primary) 35%, transparent);
+  border-width: 1px;
+}
+/* accent */
+.badge-accent {
+  background-color: color-mix(in oklch, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in oklch, var(--color-accent) 35%, transparent);
+  border-width: 1px;
+}
+/* info */
+.badge-info,
+.alert-info {
+  background-color: color-mix(in oklch, var(--color-info) 12%, transparent);
+  color: var(--color-info);
+  border-color: color-mix(in oklch, var(--color-info) 35%, transparent);
+  border-width: 1px;
+}
+/* success */
+.badge-success,
+.alert-success {
+  background-color: color-mix(in oklch, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+  border-color: color-mix(in oklch, var(--color-success) 35%, transparent);
+  border-width: 1px;
+}
+/* warning */
+.badge-warning,
+.alert-warning {
+  background-color: color-mix(in oklch, var(--color-warning) 12%, transparent);
+  color: var(--color-warning);
+  border-color: color-mix(in oklch, var(--color-warning) 35%, transparent);
+  border-width: 1px;
+}
+/* error */
+.badge-error,
+.alert-error {
+  background-color: color-mix(in oklch, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+  border-color: color-mix(in oklch, var(--color-error) 35%, transparent);
+  border-width: 1px;
+}
+
+/* badge-outline — drop the separate outline; unified style above wins */
+.badge-outline {
+  background-color: transparent;
+  border-width: 1px;
+}
+
+/* Code blocks: rounded + slightly lighter than cards.
+   Cards: bg-base-200. Code inside: bg-base-300. */
+pre {
+  background-color: var(--color-base-300);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Inline code */
+:not(pre) > code {
+  background-color: var(--color-base-300);
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8em;
+}
+
+/* Modal: subtle border to separate from page background */
+.modal-box {
+  border: 1px solid var(--color-modal-border);
+}
+
+/* Stepper: inactive steps — override --step-bg so circle AND line both use base-200.
+   Must target the .step element (not ::after) because DaisyUI drives both
+   the circle background and border from this single token. */
+[data-theme="haust"] .steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info) {
+  --step-bg: var(--color-base-200);
+  --step-fg: var(--color-base-content);
+}
+
+/* Stepper: active/semantic states use matching -content token for text */
+.steps .step-primary::after  { color: var(--color-primary-content); }
+.steps .step-success::after  { color: var(--color-success-content); }
+.steps .step-error::after    { color: var(--color-error-content); }
+.steps .step-warning::after  { color: var(--color-warning-content); }
+.steps .step-info::after     { color: var(--color-info-content); }
 
 /* Toast slide-in animation */
 @keyframes slide-in {

@@ -1,9 +1,9 @@
 "use client";
 
 import { HashRouter, Routes, Route, useParams, Outlet } from "react-router-dom";
-import NavBar from "./components/NavBar";
-import Footer from "./components/Footer";
-import WalletConnectRequestHandler from "./components/WalletConnectRequestHandler";
+import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
+import WalletConnectRequestHandler from "../components/WalletConnectRequestHandler";
 import HomePageClient from "./HomePageClient";
 import AccountsSafeClient from "./accounts/AccountsSafeClient";
 import AdvancedSettingsClient from "./settings/AdvancedSettingsClient";
