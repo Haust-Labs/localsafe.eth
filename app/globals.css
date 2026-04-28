@@ -103,14 +103,12 @@ pre {
   font-size: 0.8em;
 }
 
-/* Stepper: text inside circles = background color (black) */
-.steps .step-primary::after,
-.steps .step-success::after,
-.steps .step-error::after,
-.steps .step-warning::after,
-.steps .step-info::after {
-  color: oklch(0% 0 0);
-}
+/* Stepper: use -content token per state instead of hardcoded black */
+.steps .step-primary::after  { color: var(--color-primary-content); }
+.steps .step-success::after  { color: var(--color-success-content); }
+.steps .step-error::after    { color: var(--color-error-content); }
+.steps .step-warning::after  { color: var(--color-warning-content); }
+.steps .step-info::after     { color: var(--color-info-content); }
 
 /* Toast slide-in animation */
 @keyframes slide-in {
