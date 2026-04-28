@@ -103,9 +103,8 @@ pre {
   font-size: 0.8em;
 }
 
-/* Modal: elevated surface, one step lighter than content bg + border */
+/* Modal: subtle border to separate from page background */
 .modal-box {
-  background-color: var(--color-base-300);
   border: 1px solid var(--color-modal-border);
 }
 
