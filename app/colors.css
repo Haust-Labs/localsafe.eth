@@ -1,12 +1,8 @@
 /*
-  ============================================================
-  HAUST COLOR TOKENS — generated from Design System editor
-  Paste into app/colors.css
-  ============================================================
+  HAUST design tokens — single source of truth.
+  Edit this file directly to change brand colors, radii, and borders.
+  The /design-system page can also export an updated version of this block.
 */
-body {
-  font-family: 'Inter', sans-serif;
-}
 
 [data-theme="haust"] {
   color-scheme: dark;

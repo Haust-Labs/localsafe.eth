@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Note: tokens round-trip through 8-bit RGB hex (oklch → canvas → hex → oklch),
+// so exported values drift slightly from the source `colors.css`. Treat the
+// exported block as a starting point; copy individual rows rather than
+// overwriting the whole file if exact source values matter.
+
 function cssToHex(color: string): string {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 1;
@@ -540,8 +545,8 @@ ${body}
           <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-lg font-bold">Export → app/colors.css</h3>
             <p className="text-base-content/50 mb-3 text-sm">
-              Вставь в <code className="bg-base-300 text-primary rounded px-1 font-mono text-xs">app/colors.css</code> —
-              весь фронт перекрасится.
+              Paste into <code className="bg-base-300 text-primary rounded px-1 font-mono text-xs">app/colors.css</code>{" "}
+              to apply across the app.
             </p>
             <textarea
               readOnly
@@ -550,7 +555,7 @@ ${body}
             />
             <div className="modal-action">
               <button onClick={copyExport} className="btn btn-primary">
-                {copied ? "Скопировано!" : "Copy to clipboard"}
+                {copied ? "Copied!" : "Copy to clipboard"}
               </button>
               <button onClick={() => setShowExport(false)} className="btn btn-ghost">
                 Close
