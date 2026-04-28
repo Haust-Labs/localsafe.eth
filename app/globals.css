@@ -125,10 +125,12 @@ pre {
   border: 1px solid var(--color-modal-border);
 }
 
-/* Stepper: inactive circles filled with base-200 (same across all step components) */
-.steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info)::after {
+/* Stepper: inactive circles — solid base-200 fill, no outline */
+[data-theme="haust"] .steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info)::after {
   background-color: var(--color-base-200);
   color: var(--color-base-content);
+  outline: none;
+  box-shadow: none;
 }
 
 /* Stepper: active/semantic states use matching -content token for text */
