@@ -42,4 +42,7 @@
 
   /* Border */
   --border: 1px;
+
+  /* Modal */
+  --color-modal-border: #1C1F23;
 }
