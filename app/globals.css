@@ -28,13 +28,19 @@ input.btn:not(.btn-circle) {
   border-radius: 0.75rem;
 }
 
-/* Inputs: suppress browser autofill background (webkit blue/grey fill) */
+/* Inputs: background stays the same when filled or autofilled; only text color changes */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px var(--color-base-200) inset !important;
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-base-100) inset !important;
   -webkit-text-fill-color: var(--color-base-content) !important;
   caret-color: var(--color-base-content);
+}
+
+.input:not(:placeholder-shown) {
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
 }
 
 /* Semantic components: transparent fill.
