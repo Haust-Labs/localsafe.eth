@@ -23,8 +23,8 @@ body > [data-rk] {
    DaisyUI reads --radius-field, but :root from themes.css
    overrides the token, so we set this directly.
    input.btn (type=button/reset) also needs explicit override. */
-.btn:not(.btn-circle):not(.btn-square),
-input.btn:not(.btn-circle):not(.btn-square) {
+.btn:not(.btn-circle),
+input.btn:not(.btn-circle) {
   border-radius: 0.75rem;
 }
 
