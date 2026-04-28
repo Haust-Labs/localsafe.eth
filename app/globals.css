@@ -125,12 +125,12 @@ pre {
   border: 1px solid var(--color-modal-border);
 }
 
-/* Stepper: inactive circles — solid base-200 fill, no outline */
-[data-theme="haust"] .steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info)::after {
-  background-color: var(--color-base-200);
-  color: var(--color-base-content);
-  outline: none;
-  box-shadow: none;
+/* Stepper: inactive steps — override --step-bg so circle AND line both use base-200.
+   Must target the .step element (not ::after) because DaisyUI drives both
+   the circle background and border from this single token. */
+[data-theme="haust"] .steps .step:not(.step-primary):not(.step-secondary):not(.step-accent):not(.step-success):not(.step-error):not(.step-warning):not(.step-info) {
+  --step-bg: var(--color-base-200);
+  --step-fg: var(--color-base-content);
 }
 
 /* Stepper: active/semantic states use matching -content token for text */
