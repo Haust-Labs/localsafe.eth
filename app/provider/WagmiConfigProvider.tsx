@@ -20,7 +20,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
 import { defineChain } from "viem";
-import haustIcon from "../assets/custom/token-icon.svg";
+import ethereumIcon from "../assets/chainIcons/ethereum.svg";
 
 // Helper to add icon URLs to chains
 const addChainIcon = (chain: Chain, iconUrl: string): Chain =>
@@ -52,7 +52,8 @@ const haustMainnet = defineChain({
 });
 
 // Default chains - only Haust Mainnet
-const DEFAULT_CHAINS: Chain[] = [addChainIcon(haustMainnet, haustIcon.src)];
+// TODO: replace with Haust token icon once app/assets/custom/token-icon.svg is added
+const DEFAULT_CHAINS: Chain[] = [addChainIcon(haustMainnet, ethereumIcon.src)];
 
 export interface WagmiConfigContextType {
   configChains: Chain[];
