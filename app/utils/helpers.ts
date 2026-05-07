@@ -16,10 +16,13 @@ export async function getMinimalEIP1193Provider(
   if (!connector) return null;
   const rawProvider = await connector.getProvider();
   const baseProvider = rawProvider as MinimalEIP1193Provider;
+  // Bind methods to the original provider so they keep access to wallet-internal state
+  // (viem's `custom(provider)` rebinds `request` to the wrapper object, which would
+  // strip `this` from the underlying wallet provider and break EIP-1193 calls).
   return {
-    request: baseProvider.request,
-    on: baseProvider.on,
-    removeListener: baseProvider.removeListener,
+    request: baseProvider.request.bind(baseProvider),
+    on: baseProvider.on?.bind(baseProvider),
+    removeListener: baseProvider.removeListener?.bind(baseProvider),
   };
 }
 

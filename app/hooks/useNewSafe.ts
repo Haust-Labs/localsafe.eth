@@ -17,8 +17,8 @@ import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
  */
 export default function useNewSafe() {
   // Wagmi hooks
-  const { address: signer, connector } = useAccount();
-  const { switchChain } = useSwitchChain();
+  const { address: signer, connector, chain: currentChain } = useAccount();
+  const { switchChain, switchChainAsync } = useSwitchChain();
 
   // Get SafeWalletProvider context
   const { addSafe, contractNetworks } = useSafeWalletContext();
@@ -68,10 +68,28 @@ export default function useNewSafe() {
       const steps: SafeDeployStep[] = DEFAULT_DEPLOY_STEPS.map((step) => ({
         ...step,
       }));
+      const formatError = (err: unknown): string => {
+        if (err instanceof Error) return err.message;
+        if (typeof err === "object" && err !== null) {
+          const obj = err as { message?: unknown; code?: unknown };
+          const code = obj.code;
+          const message = typeof obj.message === "string" ? obj.message : "";
+          // WalletConnect SDK error code for a torn-down session.
+          if (code === 6000) {
+            return "Wallet session disconnected. Please reconnect your wallet and try again.";
+          }
+          if (message) return code !== undefined ? `${message} (code ${String(code)})` : message;
+        }
+        return String(err);
+      };
       try {
         steps[0].status = "running";
         setDeploySteps([...steps]);
-        switchChain?.({ chainId: chain.id });
+        // Await chain switch only when actually on a different chain — firing it
+        // unawaited races the wallet's auth/switch prompt against eth_sendTransaction.
+        if (currentChain?.id !== chain.id) {
+          await switchChainAsync?.({ chainId: chain.id });
+        }
         const provider = await getMinimalEIP1193Provider(connector);
         if (!provider) {
           steps[0].status = "error";
@@ -97,7 +115,7 @@ export default function useNewSafe() {
           setDeploySteps([...steps]);
         } catch (err) {
           steps[0].status = "error";
-          steps[0].error = err instanceof Error ? err.message : String(err);
+          steps[0].error = formatError(err);
           setDeploySteps([...steps]);
           return steps;
         }
@@ -114,7 +132,7 @@ export default function useNewSafe() {
           setDeploySteps([...steps]);
         } catch (err) {
           steps[1].status = "error";
-          steps[1].error = err instanceof Error ? err.message : String(err);
+          steps[1].error = formatError(err);
           setDeploySteps([...steps]);
           return steps;
         }
@@ -128,7 +146,7 @@ export default function useNewSafe() {
           }
         } catch (err) {
           steps[2].status = "error";
-          steps[2].error = err instanceof Error ? err.message : String(err);
+          steps[2].error = formatError(err);
           setDeploySteps([...steps]);
           return steps;
         }
@@ -166,19 +184,19 @@ export default function useNewSafe() {
           }
         } catch (err) {
           steps[3].status = "error";
-          steps[3].error = err instanceof Error ? err.message : String(err);
+          steps[3].error = formatError(err);
           steps[3].txHash = txHash;
           setDeploySteps([...steps]);
           return steps;
         }
       } catch (err) {
         steps[0].status = "error";
-        steps[0].error = err instanceof Error ? err.message : String(err);
+        steps[0].error = formatError(err);
         setDeploySteps([...steps]);
       }
       return steps;
     },
-    [connector, signer, addSafe, switchChain, contractNetworks],
+    [connector, signer, addSafe, switchChainAsync, currentChain, contractNetworks],
   );
 
   // Connect to an existing Safe and fetch its owners and threshold
