@@ -13,6 +13,7 @@ import { BroadcastModal } from "@/app/components/BroadcastModal";
 import { useAccount } from "wagmi";
 import { useToast } from "@/app/hooks/useToast";
 import { calculateSafeTxHashes } from "@/app/utils/messageHashing";
+import { isAAWallet } from "@/app/utils/aaDetection";
 
 /**
  * Maps chain IDs to chain names expected by Cyfrin tools
@@ -53,7 +54,8 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
   // Hooks
   const { chain, address: connectedAddress } = useAccount();
   const navigate = useNavigate();
-  const { signSafeTransaction, broadcastSafeTransaction, isOwner, safeInfo, kit } = useSafe(safeAddress);
+  const { signSafeTransaction, broadcastSafeTransaction, approveSafeTransactionHash, isOwner, safeInfo, kit } =
+    useSafe(safeAddress);
   const { removeTransaction, getAllTransactions, saveTransaction } = useSafeTxContext();
   const toast = useToast();
 
@@ -63,6 +65,8 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
   const [signing, setSigning] = useState(false);
+  const [approvingOnChain, setApprovingOnChain] = useState(false);
+  const [onChainApprovers, setOnChainApprovers] = useState<string[]>([]);
   const [broadcasting, setBroadcasting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddSigModal, setShowAddSigModal] = useState(false);
@@ -74,15 +78,49 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
     eip712Hash: string;
   } | null>(null);
 
-  // Check if current user has signed this specific transaction
+  // Track whether the connected wallet is an AA / smart-account wallet (its
+  // ECDSA signature recovers to a non-claimed address). When true we hide the
+  // off-chain "Sign Transaction" affordance and steer the user to "Approve
+  // On-chain" instead — off-chain sigs from AA wallets fail Safe's GS026.
+  const [isAA, setIsAA] = useState<boolean>(() => isAAWallet(connectedAddress));
+  useEffect(() => {
+    const refresh = () => setIsAA(isAAWallet(connectedAddress));
+    refresh();
+    if (typeof window === "undefined") return;
+    window.addEventListener("localsafe-aa-cache-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("localsafe-aa-cache-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [connectedAddress]);
+
+  // Check if current user has signed this specific transaction (off-chain).
   const hasSignedThisTx =
     safeTx && connectedAddress ? (safeTx.signatures?.has(connectedAddress.toLowerCase()) ?? false) : false;
 
+  // Check if current user has approved this tx hash on-chain (the AA-friendly path).
+  const hasApprovedOnChain =
+    !!connectedAddress && onChainApprovers.some((a) => a.toLowerCase() === connectedAddress.toLowerCase());
+
+  // Union of unique approvers (off-chain signers + on-chain approvers + the broadcaster
+  // if they're an owner — the contract counts msg.sender == owner as a v=1 sig too).
+  const offChainSignerCount = safeTx?.signatures
+    ? new Set(Array.from(safeTx.signatures.values()).map((s) => s.signer.toLowerCase())).size
+    : 0;
+  const validApproverCount = (() => {
+    const set = new Set<string>();
+    if (safeTx?.signatures) {
+      Array.from(safeTx.signatures.values()).forEach((s) => set.add(s.signer.toLowerCase()));
+    }
+    onChainApprovers.forEach((a) => set.add(a.toLowerCase()));
+    if (connectedAddress && isOwner) set.add(connectedAddress.toLowerCase());
+    return set.size;
+  })();
+
   // Check if user can execute directly (they would be the last signer needed)
   const canExecuteDirectly =
-    safeTx && safeInfo && isOwner && !hasSignedThisTx
-      ? safeInfo.threshold - (safeTx.signatures?.size || 0) === 1
-      : false;
+    safeTx && safeInfo && isOwner && !hasSignedThisTx ? safeInfo.threshold - offChainSignerCount === 1 : false;
 
   const [showSignDropdown, setShowSignDropdown] = useState(false);
   const [showCollabDropdown, setShowCollabDropdown] = useState(false);
@@ -129,21 +167,38 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
         const chainId = String(chain.id);
         const allTxs = getAllTransactions(safeAddress, chainId);
 
-        // Find the transaction matching this hash
+        // Find the transaction matching this hash. Skip per-tx errors so a
+        // single malformed pending entry can't kill the whole iteration.
         let matchingTx: EthSafeTransaction | null = null;
         for (const tx of allTxs) {
-          const hash = await kit.getTransactionHash(tx);
-          if (hash === txHash) {
-            matchingTx = tx;
-            break;
+          try {
+            const hash = await kit.getTransactionHash(tx);
+            if (hash === txHash) {
+              matchingTx = tx;
+              break;
+            }
+          } catch {
+            // Malformed pending tx — skip and keep searching.
           }
         }
 
         if (!cancelled) setSafeTx(matchingTx);
-      } catch {
-        if (!cancelled) {
-          toast.error("Could not load transaction");
+        if (matchingTx && !cancelled) {
+          // Hydrate the list of owners who approved this tx on-chain — needed
+          // so the UI reflects approvals from AA wallets that can't sign
+          // off-chain (the broadcast-side check is done by Safe SDK).
+          try {
+            const approvers = await kit.getOwnersWhoApprovedTx(txHash as `0x${string}`);
+            if (!cancelled) setOnChainApprovers(approvers);
+          } catch {
+            // Non-fatal — broadcast can still try.
+          }
         }
+      } catch {
+        // We avoid calling `toast.error` here: the toast provider's state
+        // update would change the `toast` reference, retriggering this effect
+        // and causing an infinite re-render loop. Surface the failure via the
+        // page's "Transaction not found" empty state instead.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -152,7 +207,10 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
     return () => {
       cancelled = true;
     };
-  }, [kit, chain, txHash, safeAddress, getAllTransactions, toast]);
+    // `toast` and `getAllTransactions` are intentionally omitted: they're not
+    // stable across renders and would loop when this effect calls toast/state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kit, chain, txHash, safeAddress]);
 
   /**
    * Calculate EIP-712 hashes when transaction is loaded
@@ -199,7 +257,13 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
     try {
       const signedTx = await signSafeTransaction(safeTx);
       if (!signedTx) {
-        toast.error("Signing failed");
+        // signSafeTransaction returns null when AA detection discards the
+        // bogus signature. Surface a hint that points at the working flow.
+        if (isAAWallet(connectedAddress)) {
+          toast.error("This wallet can't sign off-chain — use Approve On-chain.");
+        } else {
+          toast.error("Signing failed");
+        }
       } else {
         toast.success("Signature added!");
         setSafeTx(signedTx);
@@ -209,6 +273,40 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
       toast.error("Signing failed");
     }
     setSigning(false);
+  }
+
+  /**
+   * Approve the transaction hash on-chain. This is the workaround for AA wallets
+   * (e.g. Haust Wallet) where the wallet's ECDSA signature recovers to an
+   * address that doesn't match the wallet's claimed account, which makes
+   * off-chain signatures fail Safe's `checkNSignatures` (`GS026`).
+   *
+   * Sends a normal `approveHash(safeTxHash)` contract call. On broadcast, Safe
+   * SDK auto-injects a v=1 placeholder signature for every owner that has
+   * approved on-chain.
+   */
+  async function handleApproveOnChain() {
+    if (!safeTx) return;
+    setApprovingOnChain(true);
+    try {
+      const result = await approveSafeTransactionHash(safeTx);
+      if (result && typeof result === "object" && "transactionResponse" in result) {
+        const txResp = (result as { transactionResponse?: Promise<{ wait?: () => Promise<unknown> }> })
+          .transactionResponse;
+        if (txResp) await (await txResp).wait?.();
+      }
+      // Refresh the on-chain approvers list so the UI reflects the new state.
+      if (kit && safeTx) {
+        const hash = await kit.getTransactionHash(safeTx);
+        const approvers = await kit.getOwnersWhoApprovedTx(hash);
+        setOnChainApprovers(approvers);
+      }
+      toast.success("Approved on-chain!");
+    } catch (e) {
+      console.error("On-chain approval error:", e);
+      toast.error("On-chain approval failed");
+    }
+    setApprovingOnChain(false);
   }
 
   /**
@@ -594,7 +692,30 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
                 {/* Primary Actions: Sign and Broadcast */}
                 <div className="flex flex-wrap gap-2">
                   <div className="mb-1 w-full text-sm font-semibold">Primary Actions</div>
-                  {canExecuteDirectly ? (
+                  {/* Off-chain "Sign Transaction" is hidden for AA wallets —
+                      their ECDSA signature recovers to a non-claimed address
+                      and would fail Safe's GS026. "Execute Transaction" still
+                      works because the AA wallet's UserOp lands at the Safe
+                      with msg.sender == owner, satisfying the v=1 shortcut.
+                      So when an AA user can execute directly, surface a plain
+                      Execute button instead of the Sign/Execute dropdown. */}
+                  {isAA && canExecuteDirectly ? (
+                    <button
+                      className="btn btn-success"
+                      onClick={handleBroadcast}
+                      disabled={signing || broadcasting}
+                      data-testid="tx-details-execute-btn"
+                    >
+                      {broadcasting ? (
+                        <div className="flex items-center">
+                          <span>Executing in progress</span>
+                          <span className="loading loading-dots loading-xs ml-2" />
+                        </div>
+                      ) : (
+                        "Execute Transaction"
+                      )}
+                    </button>
+                  ) : isAA ? null : canExecuteDirectly ? (
                     <div className={`dropdown dropdown-top ${showSignDropdown ? "dropdown-open" : ""}`}>
                       <button
                         type="button"
@@ -686,10 +807,30 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
                       )}
                     </button>
                   )}
+                  {/* AA-wallet-friendly fallback: approve the tx hash on-chain
+                      instead of producing an off-chain ECDSA signature. */}
+                  <button
+                    className="btn btn-outline btn-success"
+                    onClick={handleApproveOnChain}
+                    disabled={!isOwner || approvingOnChain || hasApprovedOnChain}
+                    title="Approve hash on-chain (works with AA wallets)"
+                    data-testid="tx-details-approve-onchain-btn"
+                  >
+                    {hasApprovedOnChain ? (
+                      "Approved On-chain"
+                    ) : approvingOnChain ? (
+                      <div className="flex items-center">
+                        <span>Approving on-chain</span>
+                        <span className="loading loading-dots loading-xs ml-2" />
+                      </div>
+                    ) : (
+                      "Approve On-chain"
+                    )}
+                  </button>
                   <button
                     className="btn btn-primary"
                     onClick={handleBroadcast}
-                    disabled={!(safeTx && safeInfo && safeTx.signatures?.size >= safeInfo.threshold) || broadcasting}
+                    disabled={!(safeTx && safeInfo && validApproverCount >= safeInfo.threshold) || broadcasting}
                     title="Broadcasting tx"
                     data-testid="tx-details-broadcast-btn"
                   >

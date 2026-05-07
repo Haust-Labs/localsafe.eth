@@ -2,6 +2,7 @@ import { useAccount } from "wagmi";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 import { createConnectionConfig, createPredictionConfig, getMinimalEIP1193Provider } from "../utils/helpers";
+import { detectAAFromSignature, markWalletAA } from "../utils/aaDetection";
 import { getAddress, encodeFunctionData, Address } from "viem";
 
 // Cache for protocolKit instances (per chainId+safeAddress)
@@ -464,6 +465,33 @@ export default function useSafe(safeAddress: `0x${string}`) {
           });
         }
         const signedTx = await reconnectedKit.signTransaction(normalizedSafeTx);
+
+        // Verify the signature recovers to the wallet's claimed address. If
+        // not, the wallet is an AA / smart-account wallet whose ECDSA
+        // signature recovers to a different (internal) key — this is what
+        // triggers Safe's `GS026` on broadcast. We discard the bogus sig,
+        // mark the wallet as AA so the UI can hide off-chain signing, and
+        // return null so the caller surfaces the failure.
+        const signerKey = checksummedSigner.toLowerCase();
+        const newSig = signedTx.signatures.get(signerKey);
+        if (newSig?.data) {
+          try {
+            const eip712Hash = (await reconnectedKit.getTransactionHash(normalizedSafeTx)) as `0x${string}`;
+            const { isAA } = await detectAAFromSignature(checksummedSigner, eip712Hash, newSig.data);
+            if (isAA) {
+              signedTx.signatures.delete(signerKey);
+              return null;
+            }
+          } catch (recoverErr) {
+            // If recovery itself fails (malformed sig, etc.), be conservative
+            // and treat as AA so the user is steered to the on-chain path.
+            console.warn("AA-detection recover failed; treating as AA wallet", recoverErr);
+            markWalletAA(checksummedSigner, true);
+            signedTx.signatures.delete(signerKey);
+            return null;
+          }
+        }
+
         saveTransaction(safeAddress, signedTx, chainId);
         setHasSigned(true);
         return signedTx;
@@ -480,6 +508,20 @@ export default function useSafe(safeAddress: `0x${string}`) {
     const kit = kitRef.current;
     if (!kit) return null;
     return kit.executeTransaction(safeTx);
+  }, []);
+
+  // Approve a SafeTransaction hash on-chain. This is the EIP-1271-free escape
+  // hatch for wallets whose ECDSA signature recovers to an address that isn't
+  // the wallet's claimed account (e.g. AA wallets like Haust Wallet — see the
+  // Safe `checkNSignatures` v==1 branch). The owner sends a normal
+  // `approveHash(safeTxHash)` contract call; on broadcast, Safe SDK auto-injects
+  // a v=1 placeholder signature via `getOwnersWhoApprovedTx`, so no off-chain
+  // ECDSA signature is needed.
+  const approveSafeTransactionHash = useCallback(async (safeTx: EthSafeTransaction) => {
+    const kit = kitRef.current;
+    if (!kit) return null;
+    const hash = await kit.getTransactionHash(safeTx);
+    return kit.approveTransactionHash(hash);
   }, []);
 
   // Reconstruct SafeTransaction from provider data (current only)
@@ -784,6 +826,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
     getSafeTransactionHash,
     signSafeTransaction,
     broadcastSafeTransaction,
+    approveSafeTransactionHash,
     getSafeTransactionCurrent,
     deployUndeployedSafe,
     addSafe,
