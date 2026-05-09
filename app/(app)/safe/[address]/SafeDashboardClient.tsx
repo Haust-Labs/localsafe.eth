@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
 import TokenBalancesSection from "@/app/components/TokenBalancesSection";
+import TransactionHistorySection from "@/app/components/TransactionHistorySection";
 import ManageOwnersModal from "@/app/components/ManageOwnersModal";
 import ConfigureMultiSendModal from "@/app/components/ConfigureMultiSendModal";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
@@ -43,6 +44,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
     kit,
     deployUndeployedSafe,
     createBatchedOwnerManagementTransaction,
+    refresh,
   } = useSafe(safeAddress);
   // Hooks
   const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction } = useSafeTxContext();
@@ -66,6 +68,33 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processedImportRef = useRef<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Polling: keep balance / nonce / queued tx list / on-chain history fresh
+  // without requiring the user to reload the page. Only runs when the Safe is
+  // deployed; pauses while the tab is hidden, and refetches immediately when
+  // it becomes visible again.
+  useEffect(() => {
+    if (!safeInfo?.deployed || unavailable) return;
+    const POLL_INTERVAL_MS = 15_000;
+
+    function tick() {
+      if (typeof document !== "undefined" && document.hidden) return;
+      refresh();
+      setRefreshCounter((c) => c + 1);
+    }
+
+    const intervalId = window.setInterval(tick, POLL_INTERVAL_MS);
+
+    function onVisibilityChange() {
+      if (!document.hidden) tick();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [safeInfo?.deployed, unavailable, refresh]);
 
   // Handle shared transaction or signature links
   useEffect(() => {
@@ -691,6 +720,17 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
           </AppCard>
         )}
       </div>
+
+      {/* Transaction History Section */}
+      {safeInfo && safeInfo.deployed && !unavailable && (
+        <div className="mt-6">
+          <TransactionHistorySection
+            safeAddress={safeAddress}
+            chain={chain}
+            refreshKey={refreshCounter}
+          />
+        </div>
+      )}
 
       {/* Pending Messages Section */}
       {allMessages.length > 0 && (

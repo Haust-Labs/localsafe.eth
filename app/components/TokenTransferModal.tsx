@@ -182,6 +182,15 @@ export default function TokenTransferModal({
     setAmount(tokenBalance);
   }
 
+  // Allow only digits and a single decimal point (no commas, no letters).
+  // Matches empty string and intermediate states like "1.", ".5", "12.34".
+  function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    if (next === "" || /^\d*\.?\d*$/.test(next)) {
+      setAmount(next);
+    }
+  }
+
   function handleClose() {
     setRecipient("");
     setAmount("");
@@ -233,10 +242,11 @@ export default function TokenTransferModal({
         <div className="flex gap-2">
           <input
             type="text"
+            inputMode="decimal"
             className="input input-bordered flex-1 font-mono text-sm"
             placeholder="0.0"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={handleAmountChange}
           />
           <button className="btn btn-sm" onClick={handleMaxClick}>
             Max

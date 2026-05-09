@@ -2,11 +2,18 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicClient } from "wagmi";
-import { formatUnits } from "viem";
+import { formatUnits, parseAbiItem } from "viem";
 import { fetchTokenPrice } from "@/app/utils/coingecko";
 import { getCoinGeckoApiKey } from "./ApiKeyModal";
 import ApiKeyModal from "./ApiKeyModal";
 import TokenTransferModal from "./TokenTransferModal";
+
+// ERC-20 (and ERC-721) Transfer signature is the same: keccak("Transfer(address,address,uint256)")
+const TRANSFER_EVENT = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+// Haust gateway caps eth_getLogs at 1_000_000-block range; keep a safe margin.
+const LOG_CHUNK_SIZE = 999_999n;
+// Don't walk further than this many blocks back when auto-discovering.
+const MAX_LOOKBACK_BLOCKS = 50_000_000n;
 
 interface TokenInfo {
   address: string;
@@ -72,9 +79,89 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
   const [showJsonEditor, setShowJsonEditor] = useState(false);
   const [jsonEditorValue, setJsonEditorValue] = useState("");
   const [jsonEditorError, setJsonEditorError] = useState<string | null>(null);
+  const [discovering, setDiscovering] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const STORAGE_KEY = `token-balances-${safeAddress}-${chainId}`;
+
+  // Scan ERC-20/721 Transfer events to (safeAddress) across the whole chain history,
+  // collect unique token contracts, then keep only those that:
+  //   - currently report a non-zero balanceOf(safe), AND
+  //   - expose a `decimals()` function (filters out ERC-721 and non-standard contracts).
+  const discoverTokensFromChain = useCallback(async (): Promise<TokenInfo[]> => {
+    if (!publicClient) return [];
+
+    const latestBlock = await publicClient.getBlockNumber();
+    const earliestAllowed =
+      latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n;
+
+    const tokenAddresses = new Set<string>();
+    let toBlock = latestBlock;
+
+    while (toBlock >= earliestAllowed) {
+      const fromBlock = toBlock > LOG_CHUNK_SIZE ? toBlock - LOG_CHUNK_SIZE : 0n;
+      const lowerBound = fromBlock < earliestAllowed ? earliestAllowed : fromBlock;
+
+      const logs = await publicClient.getLogs({
+        event: TRANSFER_EVENT,
+        args: { to: safeAddress },
+        fromBlock: lowerBound,
+        toBlock,
+      });
+
+      for (const log of logs) {
+        tokenAddresses.add(log.address.toLowerCase());
+      }
+
+      if (lowerBound === 0n) break;
+      toBlock = lowerBound - 1n;
+    }
+
+    const results = await Promise.all(
+      Array.from(tokenAddresses).map(async (addr) => {
+        const addrTyped = addr as `0x${string}`;
+        try {
+          // decimals() reverts on ERC-721 — we use that as the discriminator.
+          const [balance, decimals] = await Promise.all([
+            publicClient.readContract({
+              address: addrTyped,
+              abi: ERC20_ABI,
+              functionName: "balanceOf",
+              args: [safeAddress],
+            }),
+            publicClient.readContract({
+              address: addrTyped,
+              abi: ERC20_ABI,
+              functionName: "decimals",
+            }),
+          ]);
+
+          if ((balance as bigint) === 0n) return null;
+
+          const [symbol, name] = await Promise.all([
+            publicClient
+              .readContract({ address: addrTyped, abi: ERC20_ABI, functionName: "symbol" })
+              .catch(() => "???"),
+            publicClient
+              .readContract({ address: addrTyped, abi: ERC20_ABI, functionName: "name" })
+              .catch(() => ""),
+          ]);
+
+          return {
+            address: addr,
+            symbol: symbol as string,
+            decimals: decimals as number,
+            name: name as string,
+          } as TokenInfo;
+        } catch {
+          // Not an ERC-20 (e.g. ERC-721, broken contract) — skip silently.
+          return null;
+        }
+      }),
+    );
+
+    return results.filter((r): r is TokenInfo => r !== null);
+  }, [publicClient, safeAddress]);
 
   // Load tokens from localStorage
   useEffect(() => {
@@ -92,11 +179,18 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     }
   }, [STORAGE_KEY]);
 
-  // Save tokens to localStorage
+  // Save tokens to localStorage on every change — including empty arrays, so
+  // that a user-initiated "remove all" sticks across reloads. Skip the first
+  // run after STORAGE_KEY changes (chain/safe switch): on that pass `tokens`
+  // still holds the previous safe's state and would clobber the new key
+  // before the load effect has populated it.
+  const prevStorageKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (tokens.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+    if (prevStorageKeyRef.current !== STORAGE_KEY) {
+      prevStorageKeyRef.current = STORAGE_KEY;
+      return;
     }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
   }, [tokens, STORAGE_KEY]);
 
   // Fetch USD prices for tokens
@@ -247,6 +341,30 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     setBalances(balances.filter((b) => b.address !== address));
   }
 
+  // Manual re-trigger of chain auto-discovery; merges results with existing tokens.
+  async function handleAutoDiscover() {
+    if (!publicClient || discovering) return;
+    setDiscovering(true);
+    setError(null);
+    try {
+      const found = await discoverTokensFromChain();
+      const merged = [...tokens];
+      for (const t of found) {
+        if (!merged.some((existing) => existing.address.toLowerCase() === t.address.toLowerCase())) {
+          merged.push(t);
+        }
+      }
+      setTokens(merged);
+      if (merged.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
   // Export tokens
   function handleExport() {
     const dataStr = JSON.stringify(tokens, null, 2);
@@ -371,6 +489,15 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
           <button className="btn btn-sm" onClick={handleImportClick}>
             Import
           </button>
+          <button
+            className="btn btn-sm"
+            onClick={handleAutoDiscover}
+            disabled={discovering || !publicClient}
+            title="Scan chain for ERC-20 tokens with non-zero balance"
+            data-testid="token-balances-auto-detect-btn"
+          >
+            {discovering ? "Scanning…" : "🔍 Auto-detect"}
+          </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddToken(!showAddToken)}>
             + Add Token
           </button>
@@ -405,6 +532,14 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
             </button>
           </div>
           {error && <div className="alert alert-error mt-2 text-sm">{error}</div>}
+        </div>
+      )}
+
+      {/* Auto-discovery banner */}
+      {discovering && (
+        <div className="alert alert-info mb-4" data-testid="token-balances-discovering">
+          <span className="loading loading-spinner loading-sm"></span>
+          <span>Scanning chain for ERC-20 tokens with non-zero balance — this may take a few seconds…</span>
         </div>
       )}
 

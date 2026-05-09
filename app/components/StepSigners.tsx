@@ -55,7 +55,8 @@ export default function StepSigners({
 
   const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/^0+/, "");
-    setThreshold(Number(val));
+    const next = Number(val);
+    setThreshold(next > signers.length ? signers.length : next);
   };
 
   return (

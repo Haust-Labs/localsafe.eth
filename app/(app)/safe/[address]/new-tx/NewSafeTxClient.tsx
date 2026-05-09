@@ -12,6 +12,7 @@ import { AbiFunctionItem } from "@/app/utils/types";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { useAccount } from "wagmi";
+import { parseEther } from "viem";
 import { encodeCalldataFromAbi } from "@/app/utils/abiEncoder";
 import { useToast } from "@/app/hooks/useToast";
 
@@ -318,14 +319,20 @@ export default function NewSafeTxClient({ safeAddress }: { safeAddress: `0x${str
       return;
     }
 
-    // Validate and normalize value
+    // Validate and normalize value (entered in native token, converted to wei)
     const valueStr = value.trim();
     if (valueStr && (isNaN(Number(valueStr)) || Number(valueStr) < 0)) {
       setError("Value must be a non-negative number.");
       return;
     }
     // Default to "0" if empty to prevent empty string in EIP-712 signing
-    const normalizedValue = valueStr || "0";
+    let normalizedValue: string;
+    try {
+      normalizedValue = parseEther(valueStr || "0").toString();
+    } catch {
+      setError(`Invalid value. Use a number like 1 or 0.5 (in ${chain?.nativeCurrency?.symbol ?? "native token"}).`);
+      return;
+    }
 
     // Validate data hex if provided
     const dataHex = data.trim();
@@ -439,12 +446,12 @@ export default function NewSafeTxClient({ safeAddress }: { safeAddress: `0x${str
                 />
               </fieldset>
               <fieldset className="fieldset" data-testid="new-safe-tx-value-fieldset">
-                <legend className="fieldset-legend">Value (wei)</legend>
+                <legend className="fieldset-legend">Value ({chain?.nativeCurrency?.symbol ?? "native"})</legend>
                 <input
                   className="input input-bordered w-full"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  placeholder="0"
+                  placeholder="0.0"
                   autoComplete="off"
                   type="number"
                   min="0"

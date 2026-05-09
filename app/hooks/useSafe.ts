@@ -97,6 +97,14 @@ export default function useSafe(safeAddress: `0x${string}`) {
   // Store the current kit instance in a ref
   const kitRef = useRef<Safe>(null);
 
+  // Polling / silent-refresh support: bump `version` to re-run the fetch effect
+  // without flipping `isLoading` and without blanking `safeInfo` on transient errors.
+  const [version, setVersion] = useState(0);
+  const refresh = useCallback(() => setVersion((v) => v + 1), []);
+  // Tracks the last successfully-fetched (chainId, safeAddress) pair so we can
+  // distinguish "first fetch for this key" (show loader) from "refresh of same key" (silent).
+  const lastFetchedKeyRef = useRef<string | null>(null);
+
   // Helper to (re)connect and cache a SafeKit instance
   const connectSafe = useCallback(
     async (safeAddress: `0x${string}`, provider: MinimalEIP1193Provider, signer: `0x${string}`): Promise<Safe> => {
@@ -118,18 +126,21 @@ export default function useSafe(safeAddress: `0x${string}`) {
       setIsOwner(false);
       setUnavailable(false);
       setIsLoading(false);
+      lastFetchedKeyRef.current = null;
       return;
     }
     let cancelled = false;
+    const fetchKey = `${chainId ?? ""}:${safeAddress ?? ""}`;
+    const isInitial = lastFetchedKeyRef.current !== fetchKey;
     async function fetchSafeInfo() {
-      setIsLoading(true);
+      if (isInitial) setIsLoading(true);
       setError(null);
       if (!safeAddress || !chainId) {
         setSafeInfo(null);
         kitRef.current = null;
         setIsOwner(false);
         setUnavailable(true);
-        setIsLoading(false);
+        if (isInitial) setIsLoading(false);
         return;
       }
       if (undeployedSafe) {
@@ -152,6 +163,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
             : false,
         );
         setUnavailable(false);
+        lastFetchedKeyRef.current = fetchKey;
       } else if (deployedSafe) {
         try {
           const provider = await getMinimalEIP1193Provider(connector);
@@ -178,16 +190,22 @@ export default function useSafe(safeAddress: `0x${string}`) {
           });
           setIsOwner(await kit.isOwner(signer as `0x${string}`));
           setUnavailable(false);
+          lastFetchedKeyRef.current = fetchKey;
         } catch (e: unknown) {
-          if (e instanceof Error) {
-            setError(e.message);
+          if (isInitial) {
+            if (e instanceof Error) {
+              setError(e.message);
+            } else {
+              setError("Failed to fetch Safe data from chain");
+            }
+            setSafeInfo(null);
+            kitRef.current = null;
+            setIsOwner(false);
+            setUnavailable(true);
           } else {
-            setError("Failed to fetch Safe data from chain");
+            // Silent refresh: keep last good state instead of blanking the UI.
+            console.warn("Safe refresh failed (deployed branch), keeping previous state:", e);
           }
-          setSafeInfo(null);
-          kitRef.current = null;
-          setIsOwner(false);
-          setUnavailable(true);
         }
       } else {
         // Safe not in local storage - try to fetch directly from blockchain
@@ -216,19 +234,24 @@ export default function useSafe(safeAddress: `0x${string}`) {
           });
           setIsOwner(await kit.isOwner(signer as `0x${string}`));
           setUnavailable(false);
+          lastFetchedKeyRef.current = fetchKey;
         } catch (e: unknown) {
-          if (e instanceof Error) {
-            setError(e.message);
+          if (isInitial) {
+            if (e instanceof Error) {
+              setError(e.message);
+            } else {
+              setError("Failed to fetch Safe data from chain");
+            }
+            setSafeInfo(null);
+            kitRef.current = null;
+            setIsOwner(false);
+            setUnavailable(true);
           } else {
-            setError("Failed to fetch Safe data from chain");
+            console.warn("Safe refresh failed (fallback branch), keeping previous state:", e);
           }
-          setSafeInfo(null);
-          kitRef.current = null;
-          setIsOwner(false);
-          setUnavailable(true);
         }
       }
-      setIsLoading(false);
+      if (isInitial) setIsLoading(false);
     }
     fetchSafeInfo();
     return () => {
@@ -244,6 +267,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
     connector,
     connectSafe,
     isConnected,
+    version,
   ]);
 
   // Deploy an undeployed Safe using its config from SafeWalletData
@@ -837,5 +861,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
     createRemoveOwnerTransaction,
     createChangeThresholdTransaction,
     createBatchedOwnerManagementTransaction,
+    refresh,
   };
 }
