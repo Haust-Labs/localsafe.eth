@@ -724,11 +724,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
       {/* Transaction History Section */}
       {safeInfo && safeInfo.deployed && !unavailable && (
         <div className="mt-6">
-          <TransactionHistorySection
-            safeAddress={safeAddress}
-            chain={chain}
-            refreshKey={refreshCounter}
-          />
+          <TransactionHistorySection safeAddress={safeAddress} chain={chain} refreshKey={refreshCounter} />
         </div>
       )}
 

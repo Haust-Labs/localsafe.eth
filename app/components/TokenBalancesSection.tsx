@@ -92,8 +92,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     if (!publicClient) return [];
 
     const latestBlock = await publicClient.getBlockNumber();
-    const earliestAllowed =
-      latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n;
+    const earliestAllowed = latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n;
 
     const tokenAddresses = new Set<string>();
     let toBlock = latestBlock;
@@ -142,9 +141,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
             publicClient
               .readContract({ address: addrTyped, abi: ERC20_ABI, functionName: "symbol" })
               .catch(() => "???"),
-            publicClient
-              .readContract({ address: addrTyped, abi: ERC20_ABI, functionName: "name" })
-              .catch(() => ""),
+            publicClient.readContract({ address: addrTyped, abi: ERC20_ABI, functionName: "name" }).catch(() => ""),
           ]);
 
           return {

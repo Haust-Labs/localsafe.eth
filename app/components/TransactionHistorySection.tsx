@@ -149,10 +149,7 @@ export default function TransactionHistorySection({ safeAddress, chain, refreshK
   }, [publicClient, safeAddress, refreshKey]);
 
   const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const paged = useMemo(
-    () => items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
-    [items, page],
-  );
+  const paged = useMemo(() => items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE), [items, page]);
 
   const explorerUrl = chain?.blockExplorers?.default?.url;
 
@@ -176,7 +173,7 @@ export default function TransactionHistorySection({ safeAddress, chain, refreshK
       {!loading && !error && items.length > 0 && (
         <>
           <div className="overflow-x-auto">
-            <table className="table table-sm" data-testid="safe-dashboard-tx-history-table">
+            <table className="table-sm table" data-testid="safe-dashboard-tx-history-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -194,9 +191,7 @@ export default function TransactionHistorySection({ safeAddress, chain, refreshK
                   >
                     <td>{page * PAGE_SIZE + idx + 1}</td>
                     <td>
-                      <span
-                        className={`badge ${item.status === "success" ? "badge-success" : "badge-error"}`}
-                      >
+                      <span className={`badge ${item.status === "success" ? "badge-success" : "badge-error"}`}>
                         {item.status === "success" ? "Success" : "Failure"}
                       </span>
                     </td>
@@ -225,10 +220,7 @@ export default function TransactionHistorySection({ safeAddress, chain, refreshK
             </table>
           </div>
           {pageCount > 1 && (
-            <div
-              className="mt-2 flex items-center justify-between"
-              data-testid="safe-dashboard-tx-history-pagination"
-            >
+            <div className="mt-2 flex items-center justify-between" data-testid="safe-dashboard-tx-history-pagination">
               <button
                 className="btn btn-sm"
                 disabled={page === 0}
