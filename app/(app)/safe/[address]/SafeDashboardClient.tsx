@@ -61,9 +61,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
   const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
-  const [allTxs, setAllTxs] = useState<
-    Array<{ tx: EthSafeTransaction; hash: string; onChainApprovers: string[] }>
-  >([]);
+  const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string; onChainApprovers: string[] }>>([]);
   const [allMessages, setAllMessages] = useState<Array<{ message: EthSafeMessage; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -713,16 +711,12 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
                     {!ONLY_ONCHAIN_SIGN_IN && (
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">Sigs off-chain:</span>
-                        <span data-testid={`safe-dashboard-current-tx-sigs-${hash}`}>
-                          {tx.signatures?.size ?? 0}
-                        </span>
+                        <span data-testid={`safe-dashboard-current-tx-sigs-${hash}`}>{tx.signatures?.size ?? 0}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2" title="On-chain approveHash count">
                       <span className="font-semibold">Sigs on-chain:</span>
-                      <span data-testid={`safe-dashboard-current-tx-onchain-${hash}`}>
-                        {onChainApprovers.length}
-                      </span>
+                      <span data-testid={`safe-dashboard-current-tx-onchain-${hash}`}>{onChainApprovers.length}</span>
                     </div>
                   </Link>
                   <button
