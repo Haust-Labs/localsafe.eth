@@ -26,6 +26,10 @@ export const NOUNS = [
   "Keep",
 ];
 
+// Hides off-chain ECDSA signing affordances. Owners coordinate via approveHash
+// + Broadcast only. Useful on AA-heavy chains where off-chain sigs fail GS026.
+export const ONLY_ONCHAIN_SIGN_IN = process.env.NEXT_PUBLIC_ONLY_ONCHAIN_SIGN_IN === "true";
+
 // Steps for handling a Safe deployments
 export const CREATE_STEPS = ["Networks", "Signers & Threshold", "Validate"];
 

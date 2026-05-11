@@ -14,6 +14,7 @@ import { useAccount } from "wagmi";
 import { useToast } from "@/app/hooks/useToast";
 import { calculateSafeTxHashes } from "@/app/utils/messageHashing";
 import { isAAWallet } from "@/app/utils/aaDetection";
+import { ONLY_ONCHAIN_SIGN_IN } from "@/app/utils/constants";
 
 /**
  * Maps chain IDs to chain names expected by Cyfrin tools
@@ -698,8 +699,10 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
                       works because the AA wallet's UserOp lands at the Safe
                       with msg.sender == owner, satisfying the v=1 shortcut.
                       So when an AA user can execute directly, surface a plain
-                      Execute button instead of the Sign/Execute dropdown. */}
-                  {isAA && canExecuteDirectly ? (
+                      Execute button instead of the Sign/Execute dropdown.
+                      When ONLY_ONCHAIN_SIGN_IN is set, off-chain signing is
+                      disabled globally — only Approve On-chain + Broadcast. */}
+                  {ONLY_ONCHAIN_SIGN_IN ? null : isAA && canExecuteDirectly ? (
                     <button
                       className="btn btn-success"
                       onClick={handleBroadcast}
@@ -906,39 +909,43 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
                             <span className="text-xs opacity-70">Copy link with all signatures</span>
                           </button>
                         </li>
-                        <li>
-                          <button
-                            onClick={() => {
-                              setShowCollabDropdown(false);
-                              handleShareSignature();
-                            }}
-                            disabled={!safeTx || !hasSignedThisTx}
-                            className={`flex flex-col items-start py-3 ${!safeTx || !hasSignedThisTx ? "cursor-not-allowed opacity-40" : ""}`}
-                            title={
-                              !safeTx || !hasSignedThisTx
-                                ? "You must sign the transaction first"
-                                : "Share your signature with others"
-                            }
-                            data-testid="tx-details-share-signature-btn"
-                          >
-                            <span className="font-semibold">✍️ Share Signature</span>
-                            <span className="text-xs opacity-70">Copy link with your signature only</span>
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={() => {
-                              setShowCollabDropdown(false);
-                              setShowAddSigModal(true);
-                            }}
-                            disabled={!safeTx}
-                            className="flex flex-col items-start py-3"
-                            data-testid="tx-details-add-signature-btn"
-                          >
-                            <span className="font-semibold">➕ Add Signature</span>
-                            <span className="text-xs opacity-70">Manually add another signer&apos;s signature</span>
-                          </button>
-                        </li>
+                        {!ONLY_ONCHAIN_SIGN_IN && (
+                          <>
+                            <li>
+                              <button
+                                onClick={() => {
+                                  setShowCollabDropdown(false);
+                                  handleShareSignature();
+                                }}
+                                disabled={!safeTx || !hasSignedThisTx}
+                                className={`flex flex-col items-start py-3 ${!safeTx || !hasSignedThisTx ? "cursor-not-allowed opacity-40" : ""}`}
+                                title={
+                                  !safeTx || !hasSignedThisTx
+                                    ? "You must sign the transaction first"
+                                    : "Share your signature with others"
+                                }
+                                data-testid="tx-details-share-signature-btn"
+                              >
+                                <span className="font-semibold">✍️ Share Signature</span>
+                                <span className="text-xs opacity-70">Copy link with your signature only</span>
+                              </button>
+                            </li>
+                            <li>
+                              <button
+                                onClick={() => {
+                                  setShowCollabDropdown(false);
+                                  setShowAddSigModal(true);
+                                }}
+                                disabled={!safeTx}
+                                className="flex flex-col items-start py-3"
+                                data-testid="tx-details-add-signature-btn"
+                              >
+                                <span className="font-semibold">➕ Add Signature</span>
+                                <span className="text-xs opacity-70">Manually add another signer&apos;s signature</span>
+                              </button>
+                            </li>
+                          </>
+                        )}
                       </ul>
                     )}
                   </div>

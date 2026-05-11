@@ -22,6 +22,7 @@ import ManageOwnersModal from "@/app/components/ManageOwnersModal";
 import ConfigureMultiSendModal from "@/app/components/ConfigureMultiSendModal";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import { useToast, useConfirm } from "@/app/hooks/useToast";
+import { ONLY_ONCHAIN_SIGN_IN } from "@/app/utils/constants";
 
 /**
  * SafeDashboardClient component that displays the dashboard for a specific safe, including its details and actions.
@@ -60,7 +61,9 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
   const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
-  const [allTxs, setAllTxs] = useState<Array<{ tx: EthSafeTransaction; hash: string }>>([]);
+  const [allTxs, setAllTxs] = useState<
+    Array<{ tx: EthSafeTransaction; hash: string; onChainApprovers: string[] }>
+  >([]);
   const [allMessages, setAllMessages] = useState<Array<{ message: EthSafeMessage; hash: string }>>([]);
   // Import/export modal state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -297,22 +300,49 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
         const chainId = chain?.id ? String(chain.id) : undefined;
         const transactions = getAllTransactions(safeAddress, chainId);
 
-        if (transactions.length > 0) {
-          // Get hashes for all transactions
-          const txsWithHashes = await Promise.all(
-            transactions.map(async (tx) => ({
-              tx,
-              hash: await safeKit.getTransactionHash(tx),
-            })),
-          );
+        if (transactions.length === 0) {
+          if (!cancelled) setAllTxs([]);
+          return;
+        }
 
-          if (!cancelled) {
-            setAllTxs(txsWithHashes);
+        const txsWithHashes = await Promise.all(
+          transactions.map(async (tx) => ({
+            tx,
+            hash: await safeKit.getTransactionHash(tx),
+          })),
+        );
+
+        // Safe.nonce only advances on a successful execTransaction, so any
+        // queued tx whose nonce is below the current on-chain nonce was
+        // either executed or vacated by another tx at that slot — in both
+        // cases it can never execute again and we drop it from the queue
+        // (and from localStorage so it doesn't resurface on reload).
+        const currentSafeNonce = safeInfo?.nonce;
+        const live: typeof txsWithHashes = [];
+        for (const entry of txsWithHashes) {
+          if (currentSafeNonce !== undefined && Number(entry.tx.data.nonce) < currentSafeNonce) {
+            removeTransaction(safeAddress, undefined, Number(entry.tx.data.nonce), chainId);
+          } else {
+            live.push(entry);
           }
-        } else {
-          if (!cancelled) {
-            setAllTxs([]);
-          }
+        }
+
+        const withApprovers = await Promise.all(
+          live.map(async (entry) => {
+            if (!safeInfo?.deployed) {
+              return { ...entry, onChainApprovers: [] as string[] };
+            }
+            try {
+              const approvers = await safeKit.getOwnersWhoApprovedTx(entry.hash as `0x${string}`);
+              return { ...entry, onChainApprovers: approvers };
+            } catch {
+              return { ...entry, onChainApprovers: [] as string[] };
+            }
+          }),
+        );
+
+        if (!cancelled) {
+          setAllTxs(withApprovers);
         }
       } catch {
         if (!cancelled) {
@@ -324,7 +354,8 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
     return () => {
       cancelled = true;
     };
-  }, [getAllTransactions, kit, isLoading, safeAddress, chain, refreshCounter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getAllTransactions, kit, isLoading, safeAddress, chain, refreshCounter, safeInfo?.nonce, safeInfo?.deployed]);
 
   // Fetch all messages if any
   useEffect(() => {
@@ -661,7 +692,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
         {allTxs.length > 0 && (
           <AppCard title="Current Transactions" testid="safe-dashboard-current-tx-card">
             <div className="flex flex-col gap-2">
-              {allTxs.map(({ tx, hash }) => (
+              {allTxs.map(({ tx, hash, onChainApprovers }) => (
                 <div key={hash} className="flex items-center gap-2">
                   <Link
                     className="btn btn-accent btn-outline flex w-full items-center justify-between gap-2 rounded text-sm"
@@ -679,9 +710,19 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
                         {hash}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Sigs:</span>
-                      <span>{tx.signatures?.size ?? 0}</span>
+                    {!ONLY_ONCHAIN_SIGN_IN && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Sigs off-chain:</span>
+                        <span data-testid={`safe-dashboard-current-tx-sigs-${hash}`}>
+                          {tx.signatures?.size ?? 0}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2" title="On-chain approveHash count">
+                      <span className="font-semibold">Sigs on-chain:</span>
+                      <span data-testid={`safe-dashboard-current-tx-onchain-${hash}`}>
+                        {onChainApprovers.length}
+                      </span>
                     </div>
                   </Link>
                   <button
@@ -723,7 +764,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
 
       {/* Transaction History Section */}
       {safeInfo && safeInfo.deployed && !unavailable && (
-        <div className="mt-6">
+        <div className="mt-0">
           <TransactionHistorySection safeAddress={safeAddress} chain={chain} refreshKey={refreshCounter} />
         </div>
       )}
