@@ -8,10 +8,10 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -20,7 +20,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build the application
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
+RUN pnpm rebuild
 RUN pnpm run build
 
 # Production image, copy all the files and run next
