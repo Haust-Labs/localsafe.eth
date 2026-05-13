@@ -12,6 +12,11 @@ import TokenTransferModal from "./TokenTransferModal";
 // usdValue calculations intact so we can flip this back on without rework.
 const SHOW_VALUE_COLUMN = false;
 
+// Temporarily hide the manual CoinGecko API key button. The key still
+// resolves from NEXT_PUBLIC_COINGECKO_API_KEY / localStorage; flip this
+// back on if per-user override needs to be re-exposed in the UI.
+const SHOW_API_KEY_BUTTON = false;
+
 // ERC-20 (and ERC-721) Transfer signature is the same: keccak("Transfer(address,address,uint256)")
 const TRANSFER_EVENT = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
 // Haust gateway caps eth_getLogs at 1_000_000-block range; keep a safe margin.
@@ -513,9 +518,15 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
           )}
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-sm" onClick={() => setShowApiKeyModal(true)} title="Configure CoinGecko API Key">
-            ⚙️ API
-          </button>
+          {SHOW_API_KEY_BUTTON && (
+            <button
+              className="btn btn-sm"
+              onClick={() => setShowApiKeyModal(true)}
+              title="Configure CoinGecko API Key"
+            >
+              ⚙️ API
+            </button>
+          )}
           {hasAnyBalance && (
             <button className="btn btn-sm" onClick={handleRefreshPrices} disabled={fetchingPrices}>
               {fetchingPrices ? "Refreshing…" : "Refresh"}
