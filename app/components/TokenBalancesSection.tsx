@@ -10,7 +10,7 @@ import TokenTransferModal from "./TokenTransferModal";
 
 // Temporarily hide the "Value" column from the UI. Keep the underlying
 // usdValue calculations intact so we can flip this back on without rework.
-const SHOW_VALUE_COLUMN = false;
+const SHOW_VALUE_COLUMN = true;
 
 // Temporarily hide the manual CoinGecko API key button. The key still
 // resolves from NEXT_PUBLIC_COINGECKO_API_KEY / localStorage; flip this
