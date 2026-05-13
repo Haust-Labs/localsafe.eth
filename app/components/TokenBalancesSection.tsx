@@ -519,11 +519,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
         </div>
         <div className="flex gap-2">
           {SHOW_API_KEY_BUTTON && (
-            <button
-              className="btn btn-sm"
-              onClick={() => setShowApiKeyModal(true)}
-              title="Configure CoinGecko API Key"
-            >
+            <button className="btn btn-sm" onClick={() => setShowApiKeyModal(true)} title="Configure CoinGecko API Key">
               ⚙️ API
             </button>
           )}
