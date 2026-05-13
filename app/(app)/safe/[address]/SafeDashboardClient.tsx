@@ -655,7 +655,7 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
                   onClick={handleGoToBuilder}
                   data-testid="safe-dashboard-go-to-builder-btn"
                 >
-                  Build New Transaction
+                  Transfer HAUST
                 </button>
                 <button
                   className="btn btn-outline btn-secondary"
