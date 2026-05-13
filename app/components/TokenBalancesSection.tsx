@@ -3,10 +3,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicClient } from "wagmi";
 import { formatUnits, parseAbiItem } from "viem";
-import { fetchTokenPrice } from "@/app/utils/coingecko";
+import { fetchTokenPrice, fetchNativeTokenPrice } from "@/app/utils/coingecko";
 import { getCoinGeckoApiKey } from "./ApiKeyModal";
 import ApiKeyModal from "./ApiKeyModal";
 import TokenTransferModal from "./TokenTransferModal";
+
+// Temporarily hide the "Value" column from the UI. Keep the underlying
+// usdValue calculations intact so we can flip this back on without rework.
+const SHOW_VALUE_COLUMN = false;
 
 // ERC-20 (and ERC-721) Transfer signature is the same: keccak("Transfer(address,address,uint256)")
 const TRANSFER_EVENT = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
@@ -23,6 +27,15 @@ interface TokenInfo {
 }
 
 interface TokenBalance extends TokenInfo {
+  balance: string;
+  usdPrice?: number;
+  usdValue?: number;
+}
+
+interface NativeBalance {
+  symbol: string;
+  name: string;
+  decimals: number;
   balance: string;
   usdPrice?: number;
   usdValue?: number;
@@ -80,6 +93,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
   const [jsonEditorValue, setJsonEditorValue] = useState("");
   const [jsonEditorError, setJsonEditorError] = useState<string | null>(null);
   const [discovering, setDiscovering] = useState(false);
+  const [nativeBalance, setNativeBalance] = useState<NativeBalance | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const STORAGE_KEY = `token-balances-${safeAddress}-${chainId}`;
@@ -190,6 +204,40 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
   }, [tokens, STORAGE_KEY]);
 
+  // Fetch native gas-token balance and (optionally) its USD price.
+  const fetchNative = useCallback(async () => {
+    if (!publicClient) return;
+    try {
+      const native = publicClient.chain?.nativeCurrency;
+      if (!native) {
+        setNativeBalance(null);
+        return;
+      }
+
+      const rawBalance = await publicClient.getBalance({ address: safeAddress });
+      const balanceStr = formatUnits(rawBalance, native.decimals);
+
+      const apiKey = getCoinGeckoApiKey();
+      const usdPrice = apiKey ? await fetchNativeTokenPrice(chainId, apiKey) : null;
+      const usdValue = usdPrice !== null && usdPrice !== undefined ? parseFloat(balanceStr) * usdPrice : undefined;
+
+      setNativeBalance({
+        symbol: native.symbol,
+        name: native.name,
+        decimals: native.decimals,
+        balance: balanceStr,
+        usdPrice: usdPrice ?? undefined,
+        usdValue,
+      });
+    } catch (err) {
+      console.error("Failed to fetch native balance:", err);
+    }
+  }, [publicClient, safeAddress, chainId]);
+
+  useEffect(() => {
+    fetchNative();
+  }, [fetchNative]);
+
   // Fetch USD prices for tokens
   const fetchPrices = useCallback(
     async (tokenBalances: TokenBalance[], apiKey: string) => {
@@ -275,6 +323,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     if (balances.length > 0) {
       fetchPrices(balances, apiKey);
     }
+    fetchNative();
   }
 
   // Add new token
@@ -436,8 +485,9 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
     }
   }
 
-  // Calculate total USD value
-  const totalUsdValue = balances.reduce((sum, b) => sum + (b.usdValue || 0), 0);
+  // Calculate total USD value (ERC20 balances + native)
+  const totalUsdValue = balances.reduce((sum, b) => sum + (b.usdValue || 0), 0) + (nativeBalance?.usdValue || 0);
+  const hasAnyBalance = balances.length > 0 || nativeBalance !== null;
 
   return (
     <div className="mb-6">
@@ -449,7 +499,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-baseline gap-4">
           <h3 className="text-xl font-bold">Tokens</h3>
-          {balances.length > 0 && (
+          {hasAnyBalance && (
             <div className="text-base-content">
               <span className="text-sm opacity-60">Total value: </span>
               <span className="text-lg font-semibold">
@@ -464,18 +514,16 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
         </div>
         <div className="flex gap-2">
           <button
-            className="btn btn-ghost btn-sm"
+            className="btn btn-sm"
             onClick={() => setShowApiKeyModal(true)}
             title="Configure CoinGecko API Key"
           >
             ⚙️ API
           </button>
-          {balances.length > 0 && (
-            <div className="tooltip" data-tip="Refresh Prices">
-              <button className="btn btn-ghost btn-sm" onClick={handleRefreshPrices} disabled={fetchingPrices}>
-                {fetchingPrices ? "⏳" : "🔄"}
-              </button>
-            </div>
+          {hasAnyBalance && (
+            <button className="btn btn-sm" onClick={handleRefreshPrices} disabled={fetchingPrices}>
+              {fetchingPrices ? "Refreshing…" : "Refresh"}
+            </button>
           )}
           <button className="btn btn-sm" onClick={handleOpenJsonEditor} title="Edit token list as JSON">
             Edit JSON
@@ -541,7 +589,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
       )}
 
       {/* API Key Warning */}
-      {!getCoinGeckoApiKey() && balances.length > 0 && (
+      {!getCoinGeckoApiKey() && hasAnyBalance && (
         <div className="alert alert-warning mb-4 text-sm">
           <span>
             Configure a CoinGecko API key to see USD prices.{" "}
@@ -558,7 +606,7 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
           <div className="p-8 text-center">
             <span className="loading loading-spinner loading-lg"></span>
           </div>
-        ) : balances.length === 0 && tokens.length === 0 ? (
+        ) : balances.length === 0 && tokens.length === 0 && !nativeBalance ? (
           <div className="bg-base-200 rounded-box p-8 text-center text-gray-400">
             No tokens added. Click &quot;+ Add Token&quot; to track token balances.
           </div>
@@ -569,11 +617,47 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
                 <th>Asset</th>
                 <th>Price</th>
                 <th>Balance</th>
-                <th>Value</th>
+                {SHOW_VALUE_COLUMN && <th>Value</th>}
                 <th></th>
               </tr>
             </thead>
             <tbody>
+              {nativeBalance && (
+                <tr key="native" className="hover:bg-base-200">
+                  <td>
+                    <div>
+                      <div className="font-semibold">{nativeBalance.symbol}</div>
+                      <div className="text-xs opacity-60">{nativeBalance.name} (native)</div>
+                    </div>
+                  </td>
+                  <td className="font-mono text-sm">
+                    {nativeBalance.usdPrice
+                      ? `$${nativeBalance.usdPrice.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 6,
+                        })}`
+                      : "-"}
+                  </td>
+                  <td className="font-mono text-sm">
+                    {parseFloat(nativeBalance.balance).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 4,
+                    })}{" "}
+                    {nativeBalance.symbol}
+                  </td>
+                  {SHOW_VALUE_COLUMN && (
+                    <td className="font-mono text-sm font-semibold">
+                      {nativeBalance.usdValue
+                        ? `$${nativeBalance.usdValue.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        : "-"}
+                    </td>
+                  )}
+                  <td></td>
+                </tr>
+              )}
               {balances.map((token) => (
                 <tr key={token.address} className="group hover:bg-base-200">
                   <td>
@@ -597,14 +681,16 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
                     })}{" "}
                     {token.symbol}
                   </td>
-                  <td className="font-mono text-sm font-semibold">
-                    {token.usdValue
-                      ? `$${token.usdValue.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}`
-                      : "-"}
-                  </td>
+                  {SHOW_VALUE_COLUMN && (
+                    <td className="font-mono text-sm font-semibold">
+                      {token.usdValue
+                        ? `$${token.usdValue.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        : "-"}
+                    </td>
+                  )}
                   <td>
                     <div className="flex gap-1">
                       <button
@@ -639,8 +725,11 @@ export default function TokenBalancesSection({ safeAddress, chainId }: TokenBala
           setShowApiKeyModal(false);
           // Refresh prices if API key was just added
           const apiKey = getCoinGeckoApiKey();
-          if (apiKey && balances.length > 0) {
-            fetchPrices(balances, apiKey);
+          if (apiKey) {
+            if (balances.length > 0) {
+              fetchPrices(balances, apiKey);
+            }
+            fetchNative();
           }
         }}
       />

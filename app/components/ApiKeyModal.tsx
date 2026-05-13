@@ -98,6 +98,10 @@ export default function ApiKeyModal({ open, onClose }: ApiKeyModalProps) {
 }
 
 export function getCoinGeckoApiKey(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(COINGECKO_API_KEY_STORAGE);
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(COINGECKO_API_KEY_STORAGE);
+    if (stored) return stored;
+  }
+  const fromEnv = process.env.NEXT_PUBLIC_COINGECKO_API_KEY;
+  return fromEnv && fromEnv.trim() !== "" ? fromEnv : null;
 }

@@ -335,10 +335,14 @@ export default function NewSafeTxClient({ safeAddress }: { safeAddress: `0x${str
                 <input
                   className="input input-bordered w-full"
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => setValue(e.target.value.replace(/,/g, ""))}
+                  onKeyDown={(e) => {
+                    if (e.key === ",") e.preventDefault();
+                  }}
                   placeholder="0.0"
                   autoComplete="off"
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="any"
                   data-testid="new-safe-tx-value-input"
