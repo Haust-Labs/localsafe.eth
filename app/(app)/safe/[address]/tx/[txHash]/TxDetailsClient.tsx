@@ -9,12 +9,16 @@ import { useEffect, useState } from "react";
 import { EthSafeTransaction, EthSafeSignature } from "@safe-global/protocol-kit";
 import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import DataPreview from "@/app/components/DataPreview";
-import { BroadcastModal } from "@/app/components/BroadcastModal";
-import { useAccount } from "wagmi";
+import { BroadcastModal, BroadcastStatus } from "@/app/components/BroadcastModal";
+import { useAccount, usePublicClient } from "wagmi";
+import { toEventSelector } from "viem";
 import { useToast } from "@/app/hooks/useToast";
 import { calculateSafeTxHashes } from "@/app/utils/messageHashing";
 import { isAAWallet } from "@/app/utils/aaDetection";
 import { ONLY_ONCHAIN_SIGN_IN } from "@/app/utils/constants";
+
+const EXECUTION_FAILURE_TOPIC = toEventSelector("ExecutionFailure(bytes32,uint256)");
+const RECEIPT_TIMEOUT_MS = 180_000;
 
 /**
  * Maps chain IDs to chain names expected by Cyfrin tools
@@ -59,11 +63,14 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
     useSafe(safeAddress);
   const { removeTransaction, getAllTransactions, saveTransaction } = useSafeTxContext();
   const toast = useToast();
+  const publicClient = usePublicClient();
 
   // State
   const [showModal, setShowModal] = useState(false);
   const [broadcastHash, setBroadcastHash] = useState<string | null>(null);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  const [broadcastStatus, setBroadcastStatus] = useState<BroadcastStatus>("pending");
+  const [broadcastBlock, setBroadcastBlock] = useState<bigint | null>(null);
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
   const [signing, setSigning] = useState(false);
   const [approvingOnChain, setApprovingOnChain] = useState(false);
@@ -318,25 +325,49 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
   async function handleBroadcast() {
     if (!safeTx) return;
     setBroadcasting(true);
+    setBroadcastHash(null);
+    setBroadcastError(null);
+    setBroadcastBlock(null);
+    setBroadcastStatus("pending");
+    setShowModal(true);
+
+    let txHash: `0x${string}` | undefined;
     try {
       const result = await broadcastSafeTransaction(safeTx);
-      let txHash = "";
-      if (result && typeof result === "object") {
-        txHash = result?.hash;
-      }
-      setBroadcastHash(txHash || null);
-      setBroadcastError(null);
-      setShowModal(true);
-      toast.success("Broadcast successful!");
-
-      // Remove the transaction from the pending list after successful broadcast
-      if (chain?.id) {
-        removeTransaction(safeAddress, undefined, Number(safeTx.data.nonce), String(chain.id));
-      }
+      txHash = result && typeof result === "object" ? (result.hash as `0x${string}`) : undefined;
+      setBroadcastHash(txHash ?? null);
     } catch (err) {
       setBroadcastError(err instanceof Error ? err.message : String(err));
-      setShowModal(true);
-      toast.error("Broadcast failed");
+      setBroadcasting(false);
+      return;
+    }
+
+    if (!txHash || !publicClient) {
+      setBroadcastStatus("timeout");
+      setBroadcasting(false);
+      return;
+    }
+
+    try {
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: RECEIPT_TIMEOUT_MS });
+      setBroadcastBlock(receipt.blockNumber);
+      if (receipt.status === "reverted") {
+        setBroadcastStatus("reverted");
+        toast.error("Transaction reverted");
+      } else {
+        // Safe emits ExecutionFailure instead of reverting when the inner call fails; the nonce is still consumed.
+        const innerFailed = receipt.logs.some(
+          (log) => log.address.toLowerCase() === safeAddress.toLowerCase() && log.topics[0] === EXECUTION_FAILURE_TOPIC,
+        );
+        setBroadcastStatus(innerFailed ? "execution-failed" : "success");
+        if (innerFailed) toast.warning("Transaction executed with failure");
+        else toast.success("Transaction confirmed");
+        if (chain?.id) {
+          removeTransaction(safeAddress, undefined, Number(safeTx.data.nonce), String(chain.id));
+        }
+      }
+    } catch {
+      setBroadcastStatus("timeout");
     }
     setBroadcasting(false);
   }
@@ -957,6 +988,8 @@ export default function TxDetailsClient({ safeAddress, txHash }: { safeAddress: 
                   open={showModal}
                   txHash={broadcastHash}
                   error={broadcastError}
+                  status={broadcastStatus}
+                  blockNumber={broadcastBlock}
                   blockExplorerUrl={chain?.blockExplorers?.default?.url}
                   onClose={() => setShowModal(false)}
                   onSuccess={() => {

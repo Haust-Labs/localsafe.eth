@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWalletConnect } from "@/app/provider/WalletConnectProvider";
 import { useSafeMessageContext } from "@/app/provider/SafeMessageProvider";
-import { useToast } from "@/app/hooks/useToast";
+import { useConfirm, useToast } from "@/app/hooks/useToast";
 import useSafe from "@/app/hooks/useSafe";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
@@ -21,6 +21,7 @@ import {
 export default function WalletConnectSignClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { alert: showAlert } = useConfirm();
   const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { saveMessage, getAllMessages, removeMessage } = useSafeMessageContext();
   const { kit, safeInfo } = useSafe(safeAddress);
@@ -315,7 +316,7 @@ export default function WalletConnectSignClient({ safeAddress }: { safeAddress: 
         navigate(`/safe/${safeAddress}`);
       } else {
         // Other error - show alert and allow retry
-        alert(`Failed to sign message: ${errorMessage}`);
+        void showAlert(errorMessage, { type: "error", title: "Failed to sign message" });
         setIsProcessing(false);
       }
     }
@@ -395,7 +396,10 @@ export default function WalletConnectSignClient({ safeAddress }: { safeAddress: 
       );
     } catch (error) {
       console.error("Failed to reject signing:", error);
-      alert(`Failed to reject signing: ${error instanceof Error ? error.message : String(error)}`);
+      void showAlert(error instanceof Error ? error.message : String(error), {
+        type: "error",
+        title: "Failed to reject signing",
+      });
       setIsProcessing(false);
       return;
     } finally {

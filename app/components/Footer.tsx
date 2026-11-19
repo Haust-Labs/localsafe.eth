@@ -1,8 +1,5 @@
 "use client";
 
-import Image from "next/image";
-import GithubSvg from "../assets/svg/GithubSvg";
-import poweredByCyfrinBright from "../assets/svg/powered-by-cyfrin-bright.png";
 import packageJson from "../../package.json";
 
 export default function Footer() {
@@ -10,35 +7,8 @@ export default function Footer() {
 
   return (
     <footer className="footer bg-base-100 w-full border-t border-white/20 px-4 py-4">
-      <div className="container mx-auto flex items-center justify-between">
-        {/* Left side - empty for now */}
-        <div className="flex-1"></div>
-
-        {/* Center - Powered by Cyfrin logo */}
-        <div className="flex flex-1 items-center justify-center">
-          <a
-            href="https://www.cyfrin.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-opacity hover:opacity-80"
-          >
-            <Image src={poweredByCyfrinBright} alt="Powered by Cyfrin" height={32} />
-          </a>
-        </div>
-
-        {/* Right side - Version and GitHub link */}
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <span className="text-base-content text-sm opacity-60">v{version}</span>
-          <a
-            href="https://github.com/Cyfrin/localsafe.eth"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-base-content transition-opacity hover:opacity-70"
-            aria-label="View source on GitHub"
-          >
-            <GithubSvg />
-          </a>
-        </div>
+      <div className="container mx-auto flex items-center justify-end">
+        <span className="text-base-content text-sm opacity-60">v{version}</span>
       </div>
     </footer>
   );

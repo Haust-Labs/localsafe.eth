@@ -6,6 +6,7 @@ import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
 import DefaultNetworkSvg from "../assets/svg/DefaultNetworkSvg";
 import { WAGMI_CONFIG_NETWORKS_KEY } from "../utils/constants";
 import type { NetworkFormState } from "../utils/types";
+import { useConfirm, useToast } from "@/app/hooks/useToast";
 
 interface CustomConnectButtonProps {
   onOpenNetworkModal: () => void;
@@ -19,6 +20,8 @@ export default function CustomConnectButton({
   chainStatusDisplay,
 }: CustomConnectButtonProps) {
   const [isChainMenuOpen, setIsChainMenuOpen] = useState(false);
+  const toast = useToast();
+  const { alert: showAlert } = useConfirm();
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +29,7 @@ export default function CustomConnectButton({
     try {
       const networks = localStorage.getItem(WAGMI_CONFIG_NETWORKS_KEY);
       if (!networks) {
-        alert("No networks to export");
+        toast.warning("No networks to export");
         return;
       }
 
@@ -42,7 +45,7 @@ export default function CustomConnectButton({
       setIsChainMenuOpen(false);
     } catch (error) {
       console.error("Failed to export networks:", error);
-      alert("Failed to export networks");
+      toast.error("Failed to export networks");
     }
   };
 
@@ -58,7 +61,7 @@ export default function CustomConnectButton({
 
         // Validate that it's an array
         if (!Array.isArray(importedNetworks)) {
-          alert("Invalid networks file format");
+          toast.error("Invalid networks file format");
           return;
         }
 
@@ -83,11 +86,13 @@ export default function CustomConnectButton({
         localStorage.setItem(WAGMI_CONFIG_NETWORKS_KEY, JSON.stringify(mergedNetworks));
 
         // Reload the page to apply changes
-        alert(`${addedCount} network(s) imported successfully! Reloading page...`);
-        window.location.reload();
+        void showAlert(`${addedCount} network(s) imported. The page will reload to apply them.`, {
+          type: "success",
+          title: "Networks imported",
+        }).then(() => window.location.reload());
       } catch (error) {
         console.error("Failed to import networks:", error);
-        alert("Failed to import networks. Please check the file format.");
+        toast.error("Failed to import networks. Please check the file format.");
       }
     };
     reader.readAsText(file);

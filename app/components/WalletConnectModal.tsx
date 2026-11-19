@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useWalletConnect } from "../provider/WalletConnectProvider";
 import { useAccount } from "wagmi";
 import { useParams } from "react-router-dom";
+import { useConfirm, useToast } from "@/app/hooks/useToast";
 
 type WalletConnectModalProps = {
   open: boolean;
@@ -40,6 +41,8 @@ type ProposalType = {
 
 export default function WalletConnectModal({ open, onClose }: WalletConnectModalProps) {
   const [activeTab, setActiveTab] = useState(0);
+  const toast = useToast();
+  const { alert: showAlert } = useConfirm();
   const [pairingCode, setPairingCode] = useState("");
   const [apiKeyInput, setApiKeyInput] = useState("");
   const pairingInputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +97,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
         setPairingCode(""); // Clear on success - pairing codes are single-use
       } catch (e) {
         console.error("Failed to pair:", e);
-        alert(`Failed to pair: ${e instanceof Error ? e.message : String(e)}`);
+        void showAlert(e instanceof Error ? e.message : String(e), { type: "error", title: "Failed to pair" });
         // Don't clear input on failure - let user see/fix their pairing code
       }
     }
@@ -103,11 +106,11 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
   const handleApproveSession = async () => {
     if (!pendingProposal) return;
     if (!safeAddress) {
-      alert("Please navigate to a Safe before approving a session");
+      toast.warning("Open a Safe before approving a session");
       return;
     }
     if (!chain) {
-      alert("Please connect your wallet first");
+      toast.warning("Connect your wallet first");
       return;
     }
 
@@ -167,7 +170,7 @@ export default function WalletConnectModal({ open, onClose }: WalletConnectModal
       await approveSession(namespaces, safeAddress, chain.id);
     } catch (e) {
       console.error("Failed to approve session:", e);
-      alert(`Failed to approve session: ${e instanceof Error ? e.message : String(e)}`);
+      void showAlert(e instanceof Error ? e.message : String(e), { type: "error", title: "Failed to approve session" });
     }
   };
 
