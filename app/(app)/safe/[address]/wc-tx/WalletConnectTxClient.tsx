@@ -10,9 +10,12 @@ import DataPreview from "@/app/components/DataPreview";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import type { SignClientTypes } from "@walletconnect/types";
+import { useConfirm, useToast } from "@/app/hooks/useToast";
 
 export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0x${string}` }) {
   const navigate = useNavigate();
+  const toast = useToast();
+  const { alert: showAlert } = useConfirm();
   const { chain } = useAccount();
   const { pendingRequest, approveRequest, rejectRequest, clearPendingRequest } = useWalletConnect();
   const { buildSafeTransaction, kit, safeInfo } = useSafe(safeAddress);
@@ -89,7 +92,7 @@ export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0
       // Parse custom nonce if provided
       const nonce = customNonce ? parseInt(customNonce, 10) : undefined;
       if (customNonce && (isNaN(nonce!) || nonce! < 0)) {
-        alert("Invalid nonce value");
+        toast.error("Invalid nonce value");
         setIsProcessing(false);
         return;
       }
@@ -136,7 +139,10 @@ export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0
       navigate(`/safe/${safeAddress}/tx/${safeTxHash}`);
     } catch (error) {
       console.error("Failed to approve transaction:", error);
-      alert(`Failed to approve transaction: ${error instanceof Error ? error.message : String(error)}`);
+      void showAlert(error instanceof Error ? error.message : String(error), {
+        type: "error",
+        title: "Failed to approve transaction",
+      });
       setIsProcessing(false);
     }
   };
@@ -156,7 +162,10 @@ export default function WalletConnectTxClient({ safeAddress }: { safeAddress: `0
       );
     } catch (error) {
       console.error("Failed to reject transaction:", error);
-      alert(`Failed to reject transaction: ${error instanceof Error ? error.message : String(error)}`);
+      void showAlert(error instanceof Error ? error.message : String(error), {
+        type: "error",
+        title: "Failed to reject transaction",
+      });
       setIsProcessing(false);
       return;
     } finally {

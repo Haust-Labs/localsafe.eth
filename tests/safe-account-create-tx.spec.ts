@@ -23,9 +23,7 @@ test.beforeEach("Setup", async ({ page, metamask }) => {
   await collapseCheckbox.waitFor({ state: "visible" });
   await collapseCheckbox.click();
   // Now click the safe link for the correct chain/address
-  const safeRowLink = safeRow.getByTestId(
-    `safe-account-link-${safeAddress}-${chainId}`,
-  );
+  const safeRowLink = safeRow.getByTestId(`safe-account-link-${safeAddress}-${chainId}`);
   await safeRowLink.waitFor({ state: "visible" });
   await safeRowLink.click();
 
@@ -44,13 +42,9 @@ test.beforeEach("Setup", async ({ page, metamask }) => {
 });
 
 // Transaction workflow test for Safe page
-test("should create and execute a transaction from Safe dashboard", async ({
-  page,
-}) => {
+test("should create and execute a transaction from Safe dashboard", async ({ page }) => {
   // Fill transaction details (example: send ETH)
-  await page
-    .getByTestId("new-safe-tx-recipient-input")
-    .fill("0x44586c5784a07Cc85ae9f33FCf6275Ea41636A87");
+  await page.getByTestId("new-safe-tx-recipient-input").fill("0x44586c5784a07Cc85ae9f33FCf6275Ea41636A87");
   await page.getByTestId("new-safe-tx-value-input").fill("10"); // in finney (0.01 ETH)
   const addTxBtn = page.getByTestId("new-safe-tx-add-btn");
 
@@ -69,19 +63,13 @@ test("should create and execute a transaction from Safe dashboard", async ({
   await page.waitForSelector('[data-testid="tx-details-section"]', {
     state: "visible",
   });
-  await expect(page.getByTestId("tx-details-to-value")).toHaveText(
-    "0x44586c5784a07Cc85ae9f33FCf6275Ea41636A87",
-  );
+  await expect(page.getByTestId("tx-details-to-value")).toHaveText("0x44586c5784a07Cc85ae9f33FCf6275Ea41636A87");
   await expect(page.getByTestId("tx-details-value-value")).toHaveText("10"); // in wei
 });
 
-test("should create transactions with all input variations in builder", async ({
-  page,
-}) => {
+test("should create transactions with all input variations in builder", async ({ page }) => {
   // 1. Basic ETH transfer
-  await page
-    .getByTestId("new-safe-tx-recipient-input")
-    .fill("0x1111111111111111111111111111111111111111");
+  await page.getByTestId("new-safe-tx-recipient-input").fill("0x1111111111111111111111111111111111111111");
   await page.getByTestId("new-safe-tx-value-input").fill("0.5");
   const addTxBtn = page.getByTestId("new-safe-tx-add-btn");
   await expect(addTxBtn).toBeEnabled();
@@ -89,9 +77,8 @@ test("should create transactions with all input variations in builder", async ({
   await expect(page.getByTestId("new-safe-tx-list-row-0")).toBeVisible();
 
   // 2. With Data Hex
-  await page
-    .getByTestId("new-safe-tx-recipient-input")
-    .fill("0x2222222222222222222222222222222222222222");
+  await page.goto(`${page.url()}?mode=contract`);
+  await page.getByTestId("new-safe-tx-recipient-input").fill("0x2222222222222222222222222222222222222222");
   await page.getByTestId("new-safe-tx-value-input").fill("1");
   await page.getByTestId("new-safe-tx-data-toggle").click();
   await page.getByTestId("new-safe-tx-data-input").fill("0xdeadbeef");
@@ -100,6 +87,7 @@ test("should create transactions with all input variations in builder", async ({
   await expect(page.getByTestId("new-safe-tx-list-row-1")).toBeVisible();
 
   // 3. With ABI method
+  await page.getByTestId("new-safe-tx-data-toggle").click();
   const abiJson = JSON.stringify([
     {
       type: "function",
@@ -111,17 +99,10 @@ test("should create transactions with all input variations in builder", async ({
     },
   ]);
   await page.getByTestId("new-safe-tx-abi-input").fill(abiJson);
-  await page
-    .getByTestId("new-safe-tx-abi-methods-select")
-    .selectOption("transfer");
-  await page
-    .getByTestId("new-safe-tx-abi-method-input-to")
-    .fill("0x3333333333333333333333333333333333333333");
+  await page.getByTestId("new-safe-tx-abi-methods-select").selectOption("transfer(address,uint256)");
+  await page.getByTestId("new-safe-tx-abi-method-input-to").fill("0x3333333333333333333333333333333333333333");
   await page.getByTestId("new-safe-tx-abi-method-input-amount").fill("12345");
-  await page
-    .getByTestId("new-safe-tx-recipient-input")
-    .fill("0x3333333333333333333333333333333333333333");
-  await page.getByTestId("new-safe-tx-value-input").fill("2");
+  await page.getByTestId("new-safe-tx-recipient-input").fill("0x3333333333333333333333333333333333333333");
   await expect(addTxBtn).toBeEnabled();
   await addTxBtn.click();
   await expect(page.getByTestId("new-safe-tx-list-row-2")).toBeVisible();
@@ -135,11 +116,8 @@ test("should create transactions with all input variations in builder", async ({
     },
   ]);
   await page.getByTestId("new-safe-tx-abi-input").fill(abiJsonNoInputs);
-  await page.getByTestId("new-safe-tx-abi-methods-select").selectOption("ping");
-  await page
-    .getByTestId("new-safe-tx-recipient-input")
-    .fill("0x4444444444444444444444444444444444444444");
-  await page.getByTestId("new-safe-tx-value-input").fill("3");
+  await page.getByTestId("new-safe-tx-abi-methods-select").selectOption("ping()");
+  await page.getByTestId("new-safe-tx-recipient-input").fill("0x4444444444444444444444444444444444444444");
   await expect(addTxBtn).toBeEnabled();
   await addTxBtn.click();
   await expect(page.getByTestId("new-safe-tx-list-row-3")).toBeVisible();

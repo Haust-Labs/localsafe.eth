@@ -19,8 +19,6 @@ import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
 import TokenBalancesSection from "@/app/components/TokenBalancesSection";
 import TransactionHistorySection from "@/app/components/TransactionHistorySection";
 import ManageOwnersModal from "@/app/components/ManageOwnersModal";
-import ConfigureMultiSendModal from "@/app/components/ConfigureMultiSendModal";
-import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import { useToast, useConfirm } from "@/app/hooks/useToast";
 import { ONLY_ONCHAIN_SIGN_IN } from "@/app/utils/constants";
 
@@ -50,14 +48,12 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
   // Hooks
   const { exportTx, importTx, getAllTransactions, saveTransaction, removeTransaction } = useSafeTxContext();
   const { getAllMessages, saveMessage, removeMessage } = useSafeMessageContext();
-  const { setSafeMultiSendConfig, getSafeMultiSendConfig } = useSafeWalletContext();
   const toast = useToast();
   const { confirm } = useConfirm();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
   const [manageOwnersModalOpen, setManageOwnersModalOpen] = useState(false);
-  const [multiSendModalOpen, setMultiSendModalOpen] = useState(false);
   const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
@@ -470,16 +466,6 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
     }
   }
 
-  // Get current MultiSend config for this Safe
-  const currentMultiSendConfig = chain?.id ? getSafeMultiSendConfig(String(chain.id), safeAddress) : undefined;
-
-  // Handle MultiSend config save
-  function handleSaveMultiSendConfig(multiSend?: string, multiSendCallOnly?: string) {
-    if (chain?.id) {
-      setSafeMultiSendConfig(String(chain.id), safeAddress, multiSend, multiSendCallOnly);
-    }
-  }
-
   // Handle transaction deletion
   async function handleDeleteTransaction(txHash: string, nonce: number) {
     const confirmed = await confirm(
@@ -574,9 +560,6 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
               <button className="btn btn-outline btn-sm w-full" onClick={() => setManageOwnersModalOpen(true)}>
                 Manage Owners & Threshold
               </button>
-              <button className="btn btn-outline btn-sm w-full" onClick={() => setMultiSendModalOpen(true)}>
-                Configure MultiSend
-              </button>
             </div>
           )}
         </AppCard>
@@ -649,13 +632,27 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
               </>
             )}
             {safeInfo && safeInfo.deployed && isOwner && !isLoading && !error && !unavailable && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   className="btn btn-outline btn-primary"
                   onClick={handleGoToBuilder}
                   data-testid="safe-dashboard-go-to-builder-btn"
                 >
                   Transfer HAUST
+                </button>
+                <button
+                  className="btn btn-outline btn-secondary"
+                  onClick={() => navigate(`/safe/${safeAddress}/new-tx?mode=erc20`)}
+                  data-testid="safe-dashboard-transfer-erc20-btn"
+                >
+                  Transfer ERC20
+                </button>
+                <button
+                  className="btn btn-outline btn-secondary"
+                  onClick={() => navigate(`/safe/${safeAddress}/new-tx?mode=contract`)}
+                  data-testid="safe-dashboard-contract-interaction-btn"
+                >
+                  Contract Interaction
                 </button>
                 <button
                   className="btn btn-outline btn-secondary"
@@ -848,14 +845,6 @@ export default function SafeDashboardClient({ safeAddress }: { safeAddress: `0x$
           onBatchUpdate={handleOwnerManagementBatch}
         />
       )}
-      {/* Configure MultiSend Modal */}
-      <ConfigureMultiSendModal
-        open={multiSendModalOpen}
-        onClose={() => setMultiSendModalOpen(false)}
-        currentMultiSend={currentMultiSendConfig?.multiSendAddress}
-        currentMultiSendCallOnly={currentMultiSendConfig?.multiSendCallOnlyAddress}
-        onSave={handleSaveMultiSendConfig}
-      />
     </AppSection>
   );
 }
